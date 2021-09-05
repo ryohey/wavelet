@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+  </head>
+  <body>
+    <button id="button">Start</button>
+    <script type="module">
+      document.getElementById("button").onclick = () => {
+        const audioContext = new AudioContext()
+
+        const demoCode = async (context) => {
+          await context.audioWorklet.addModule("bypass-processor.js")
+          const oscillator = new OscillatorNode(context)
+          const bypasser = new AudioWorkletNode(context, "bypass-processor")
+          oscillator.connect(bypasser).connect(context.destination)
+          oscillator.start()
+        }
+
+        demoCode(audioContext)
+        audioContext.resume()
+      }
+    </script>
+  </body>
+</html>

@@ -4,7 +4,7 @@
   "description": "A wavetable synthesizer that never stops the UI thread created by AudioWorklet.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "npx http-server src"
   },
   "author": "ryohey",
   "license": "MIT"
