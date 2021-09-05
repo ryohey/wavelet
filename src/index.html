@@ -5,20 +5,32 @@
   </head>
   <body>
     <button id="button">Start</button>
+    <button id="button-note-on">Note on</button>
+    <button id="button-note-off">Note off</button>
     <script type="module">
+      const context = new AudioContext()
+      let bypasser
+
+      const setup = async () => {
+        await context.audioWorklet.addModule("bypass-processor.js")
+        const oscillator = new OscillatorNode(context)
+        bypasser = new AudioWorkletNode(context, "bypass-processor")
+        oscillator.connect(bypasser).connect(context.destination)
+        oscillator.start()
+      }
+
+      setup()
+
       document.getElementById("button").onclick = () => {
-        const audioContext = new AudioContext()
+        context.resume()
+      }
 
-        const demoCode = async (context) => {
-          await context.audioWorklet.addModule("bypass-processor.js")
-          const oscillator = new OscillatorNode(context)
-          const bypasser = new AudioWorkletNode(context, "bypass-processor")
-          oscillator.connect(bypasser).connect(context.destination)
-          oscillator.start()
-        }
+      document.getElementById("button-note-on").onclick = () => {
+        bypasser.port.postMessage("noteOn")
+      }
 
-        demoCode(audioContext)
-        audioContext.resume()
+      document.getElementById("button-note-off").onclick = () => {
+        bypasser.port.postMessage("noteOff")
       }
     </script>
   </body>
