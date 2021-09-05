@@ -1,0 +1,11 @@
+{
+  "name": "@ryohey/wavelet",
+  "version": "0.0.1",
+  "description": "A wavetable synthesizer that never stops the UI thread created by AudioWorklet.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "ryohey",
+  "license": "MIT"
+}
