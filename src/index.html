@@ -7,6 +7,7 @@
     <button id="button">Start</button>
     <button id="button-note-on">Note on</button>
     <button id="button-note-off">Note off</button>
+    <div id="keys"></div>
     <script type="module">
       const context = new AudioContext()
       let bypasser
@@ -19,27 +20,76 @@
         oscillator.start()
       }
 
-      const loadSample = async () => {
-        const req = await fetch("piano.mp3", { type: "GET" })
+      const getSampleUrls = () => {
+        const baseUrl =
+          "https://raw.githubusercontent.com/gleitz/midi-js-soundfonts/gh-pages/MusyngKite/clarinet-mp3/"
+        const ext = ".mp3"
+        const keys = [
+          "C",
+          "Db",
+          "D",
+          "Eb",
+          "E",
+          "F",
+          "Gb",
+          "G",
+          "Ab",
+          "A",
+          "Bb",
+          "B",
+        ]
+        return [1, 2, 3, 4, 5, 6, 7].flatMap((oct) =>
+          keys.map((key) => `${baseUrl}${key}${oct}${ext}`)
+        )
+      }
+
+      const createKeyButton = (pitch) => {
+        const elm = document.createElement("button")
+        elm.textContent = pitch
+        elm.onclick = () => {
+          noteOn(pitch)
+        }
+
+        const keyContainer = document.getElementById("keys")
+        keyContainer.appendChild(elm)
+      }
+
+      const loadSample = async (url, pitch) => {
+        const req = await fetch(url, { type: "GET" })
         const audioData = await req.arrayBuffer()
+        console.log(`loaded sample for pitch ${pitch} from ${url}`)
         context.decodeAudioData(audioData, (buffer) => {
-          bypasser.port.postMessage(buffer.getChannelData(0))
+          const data = buffer.getChannelData(0)
+          bypasser.port.postMessage({ type: "loadSample", pitch, data })
         })
       }
 
+      const noteOn = (pitch = 24) => {
+        bypasser.port.postMessage({ type: "noteOn", pitch })
+      }
+
+      const noteOff = () => {
+        bypasser.port.postMessage({ type: "noteOff" })
+      }
+
       await setup()
-      await loadSample()
+
+      let pitch = 0
+      for await (let url of getSampleUrls()) {
+        await loadSample(url, pitch++)
+        createKeyButton(pitch)
+      }
 
       document.getElementById("button").onclick = () => {
         context.resume()
       }
 
       document.getElementById("button-note-on").onclick = () => {
-        bypasser.port.postMessage("noteOn")
+        noteOn()
       }
 
       document.getElementById("button-note-off").onclick = () => {
-        bypasser.port.postMessage("noteOff")
+        noteOff()
       }
     </script>
   </body>

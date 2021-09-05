@@ -12,15 +12,23 @@ class BypassProcessor extends AudioWorkletProcessor {
   constructor() {
     super()
     this.isEnabled = false
+    this.samples = {} // {pitch number: buffer}
+    this.pitch = 0
     this.port.onmessage = (e) => {
-      console.log(e)
-      if (typeof e.data === "string") {
-        this.isEnabled = e.data === "noteOn"
-        this.sampleIndex = 0
-      } else {
-        console.log("load sample")
-        this.sample = e.data
-        this.sampleIndex = 0
+      console.log(e.data)
+      switch (e.data.type) {
+        case "noteOn":
+          this.isEnabled = true
+          this.sampleIndex = 0
+          this.pitch = e.data.pitch
+          break
+        case "noteOff":
+          this.isEnabled = false
+          break
+        case "loadSample":
+          this.samples[e.data.pitch] = e.data.data
+          this.sampleIndex = 0
+          break
       }
     }
   }
@@ -29,11 +37,12 @@ class BypassProcessor extends AudioWorkletProcessor {
     if (!this.isEnabled) {
       return true
     }
+    const sample = this.samples[this.pitch]
     const output = outputs[0][0]
 
     for (let i = 0; i < output.length; ++i) {
-      output[i] = this.sample[this.sampleIndex++]
-      if (this.sampleIndex >= this.sample.length) {
+      output[i] = sample[this.sampleIndex++]
+      if (this.sampleIndex >= sample.length) {
         this.sampleIndex = 0
       }
     }
