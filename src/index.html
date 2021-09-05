@@ -19,7 +19,16 @@
         oscillator.start()
       }
 
-      setup()
+      const loadSample = async () => {
+        const req = await fetch("piano.mp3", { type: "GET" })
+        const audioData = await req.arrayBuffer()
+        context.decodeAudioData(audioData, (buffer) => {
+          bypasser.port.postMessage(buffer.getChannelData(0))
+        })
+      }
+
+      await setup()
+      await loadSample()
 
       document.getElementById("button").onclick = () => {
         context.resume()

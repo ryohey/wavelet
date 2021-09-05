@@ -13,8 +13,15 @@ class BypassProcessor extends AudioWorkletProcessor {
     super()
     this.isEnabled = false
     this.port.onmessage = (e) => {
-      console.log(e.data)
-      this.isEnabled = e.data === "noteOn"
+      console.log(e)
+      if (typeof e.data === "string") {
+        this.isEnabled = e.data === "noteOn"
+        this.sampleIndex = 0
+      } else {
+        console.log("load sample")
+        this.sample = e.data
+        this.sampleIndex = 0
+      }
     }
   }
 
@@ -22,12 +29,13 @@ class BypassProcessor extends AudioWorkletProcessor {
     if (!this.isEnabled) {
       return true
     }
-    // By default, the node has single input and output.
-    const input = inputs[0]
-    const output = outputs[0]
+    const output = outputs[0][0]
 
-    for (let channel = 0; channel < output.length; ++channel) {
-      output[channel].set(input[channel])
+    for (let i = 0; i < output.length; ++i) {
+      output[i] = this.sample[this.sampleIndex++]
+      if (this.sampleIndex >= this.sample.length) {
+        this.sampleIndex = 0
+      }
     }
 
     return true
