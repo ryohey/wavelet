@@ -16,6 +16,7 @@ class WavetableOscillator {
     this.sampleIndex = 0
     this.isPlaying = false
     this.isLooping = false
+    this.speed = 1
   }
 
   noteOn() {
@@ -29,7 +30,7 @@ class WavetableOscillator {
     this.isLooping = false
   }
 
-  process(output, speed = 1) {
+  process(output) {
     if (!this.isPlaying) {
       return
     }
@@ -43,7 +44,7 @@ class WavetableOscillator {
         output[i] = 0
       }
 
-      this.sampleIndex += speed
+      this.sampleIndex += this.speed
       if (this.sampleIndex >= this.loopEnd && this.isLooping) {
         this.sampleIndex = this.loopStart
       } else if (this.sampleIndex >= this.sampleEnd) {
@@ -54,7 +55,7 @@ class WavetableOscillator {
 }
 
 class AmplitudeEnvelope {
-  constructor(attackTime, decayTime, sustainLevel, releaseTime) {
+  constructor({attackTime, decayTime, sustainLevel, releaseTime}) {
     this.attackTime = attackTime
     this.decayTime = decayTime
     this.sustainLevel = sustainLevel
@@ -105,6 +106,41 @@ class AmplitudeEnvelope {
   }
 }
 
+class GainFilter {
+  constructor(envelope) {
+    this.envelope = envelope
+  }
+
+  process(input, output) {
+    for (let i = 0; i < output.length; ++i) {
+      output = input[i] * this.envelope.getAmplitude(i)
+    }
+  }
+}
+
+class NoteOscillator {
+  constructor(sample, envelope) {
+    this.wave = new WavetableOscillator(sample)
+    this.envelope = new AmplitudeEnvelope(envelope)
+    this.gain = new GainFilter(this.envelope)
+  }
+
+  noteOn() {
+    this.wave.noteOn()
+    this.envelope.noteOn()
+  }
+
+  noteOff() {
+    this.wave.noteOff()
+    this.envelope.noteOff()
+  }
+
+  process(output) {
+    this.wave.process(output)
+    this.gain.process(output, output)
+  }
+}
+
 class SynthProcessor extends AudioWorkletProcessor {
   constructor() {
     super()
@@ -139,7 +175,8 @@ class SynthProcessor extends AudioWorkletProcessor {
 
   process(inputs, outputs) {
     const output = outputs[0][0]
-    this.currentOscillator?.process(output, this.speed)
+    this.currentOscillator?.speed = this.speed
+    this.currentOscillator?.process(output)
     return true
   }
 }
