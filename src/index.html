@@ -14,13 +14,13 @@
     <div id="keys"></div>
     <script type="module">
       const context = new AudioContext()
-      let bypasser
+      let synth
 
       const setup = async () => {
-        await context.audioWorklet.addModule("bypass-processor.js")
+        await context.audioWorklet.addModule("synth-processor.js")
         const oscillator = new OscillatorNode(context)
-        bypasser = new AudioWorkletNode(context, "bypass-processor")
-        oscillator.connect(bypasser).connect(context.destination)
+        synth = new AudioWorkletNode(context, "synth-processor")
+        oscillator.connect(synth).connect(context.destination)
         oscillator.start()
       }
 
@@ -64,20 +64,20 @@
         console.log(`loaded sample for pitch ${pitch} from ${url}`)
         context.decodeAudioData(audioData, (buffer) => {
           const data = buffer.getChannelData(0)
-          bypasser.port.postMessage({ type: "loadSample", pitch, data })
+          synth.port.postMessage({ type: "loadSample", pitch, data })
         })
       }
 
       const noteOn = (pitch = 24) => {
-        bypasser.port.postMessage({ type: "noteOn", pitch })
+        synth.port.postMessage({ type: "noteOn", pitch })
       }
 
       const noteOff = () => {
-        bypasser.port.postMessage({ type: "noteOff" })
+        synth.port.postMessage({ type: "noteOff" })
       }
 
       const pitchBend = (value) => {
-        bypasser.port.postMessage({ type: "pitchBend", value })
+        synth.port.postMessage({ type: "pitchBend", value })
       }
 
       await setup()

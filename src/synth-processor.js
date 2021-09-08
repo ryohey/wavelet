@@ -1,7 +1,3 @@
-// Copyright (c) 2017 The Chromium Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
-
 class WavetableOscillator {
   constructor({
     sample,
@@ -31,7 +27,6 @@ class WavetableOscillator {
   noteOff() {
     // finishing the sustain loop
     this.isLooping = false
-    this.sampleIndex = this.loopEnd
   }
 
   process(output, speed = 1) {
@@ -51,22 +46,66 @@ class WavetableOscillator {
       this.sampleIndex += speed
       if (this.sampleIndex >= this.loopEnd && this.isLooping) {
         this.sampleIndex = this.loopStart
-        console.log("start loop")
       } else if (this.sampleIndex >= this.sampleEnd) {
         this.isPlaying = false
-        console.log("finish")
       }
     }
   }
 }
 
-/**
- * A simple bypass node demo.
- *
- * @class BypassProcessor
- * @extends AudioWorkletProcessor
- */
-class BypassProcessor extends AudioWorkletProcessor {
+class AmplitudeEnvelope {
+  constructor(attackTime, decayTime, sustainLevel, releaseTime) {
+    this.attackTime = attackTime
+    this.decayTime = decayTime
+    this.sustainLevel = sustainLevel
+    this.releaseTime = releaseTime
+    this.isRelease = false
+    this.time = 0
+    this.noteOffTime = 0
+  }
+
+  noteOn() {
+    this.time = 0
+    this.isPlaying = true
+  }
+
+  noteOff() {
+    this.isRelease = true
+    this.noteOffTime = this.time
+  }
+
+  getAmplitude(deltaTime) {
+    if (!this.isPlaying) {
+      return 0
+    }
+    const time = this.time + deltaTime
+
+    if (this.isRelease) {
+      // Release
+      return (
+        this.sustainLevel * (1 - (time - this.noteOffTime) / this.releaseTime)
+      )
+    }
+
+    if (time < this.attackTime) {
+      // Attack
+      return time / this.attackTime
+    }
+
+    if (time < this.attackTime + this.decayTime) {
+      // Decay
+      return (
+        1 -
+        ((1 - this.sustainLevel) * (time - this.attackTime)) / this.decayTime
+      )
+    }
+
+    // Sustain
+    return this.sustainLevel
+  }
+}
+
+class SynthProcessor extends AudioWorkletProcessor {
   constructor() {
     super()
     this.oscillators = {} // {pitch number: WavetableOscillator}
@@ -105,4 +144,4 @@ class BypassProcessor extends AudioWorkletProcessor {
   }
 }
 
-registerProcessor("bypass-processor", BypassProcessor)
+registerProcessor("synth-processor", SynthProcessor)
