@@ -1,12 +1,11 @@
 {
   "compilerOptions": {
     "incremental": true,
-    "target": "es5",
-    "module": "amd",
+    "target": "ESNext",
+    "module": "ESNext",
     "rootDir": "./src",
     "declaration": true,
     "sourceMap": true,
-    "outFile": "./public/js/processor.js",
     "outDir": "./public/js",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
