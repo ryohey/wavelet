@@ -4,8 +4,12 @@
   "description": "A wavetable synthesizer that never stops the UI thread created by AudioWorklet.",
   "main": "index.js",
   "scripts": {
-    "start": "npx http-server src -c-1 --cors"
+    "start": "npx http-server public -c-1 --cors",
+    "watch": "tsc --watch"
   },
   "author": "ryohey",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^4.4.2"
+  }
 }

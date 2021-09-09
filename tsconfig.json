@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "incremental": true,
+    "target": "es5",
+    "module": "amd",
+    "rootDir": "./src",
+    "declaration": true,
+    "sourceMap": true,
+    "outFile": "./public/js/processor.js",
+    "outDir": "./public/js",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "skipLibCheck": true
+  },
+  "include": ["./src"]
+}
