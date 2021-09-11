@@ -164,7 +164,7 @@ class NoteOscillator {
 
 class SynthProcessor extends AudioWorkletProcessor {
   private oscillators: { [key: number]: NoteOscillator } = {}
-  private currentOscillator: NoteOscillator | null = null
+  private playingOscillators: { [key: number]: NoteOscillator } = {}
   private speed = 1
 
   constructor() {
@@ -190,17 +190,23 @@ class SynthProcessor extends AudioWorkletProcessor {
           }
           this.oscillators[e.data.pitch] = new NoteOscillator(sample, envelope)
           break
-        case "noteOn":
-          if (this.oscillators[e.data.pitch] === undefined) {
-            console.warn(`There is no sample for ${e.data.pich}`)
+        case "noteOn": {
+          const { pitch } = e.data
+          const oscillator = this.oscillators[pitch]
+          if (oscillator === undefined) {
+            console.warn(`There is no sample for ${pitch}`)
           } else {
-            this.currentOscillator = this.oscillators[e.data.pitch]
-            this.currentOscillator?.noteOn()
+            this.playingOscillators[pitch] = oscillator
+            oscillator.noteOn()
           }
           break
-        case "noteOff":
-          this.currentOscillator?.noteOff()
+        }
+        case "noteOff": {
+          const { pitch } = e.data
+          const oscillator = this.playingOscillators[pitch]
+          oscillator?.noteOff()
           break
+        }
         case "pitchBend":
           this.speed = e.data.value
           break
@@ -210,11 +216,21 @@ class SynthProcessor extends AudioWorkletProcessor {
 
   process(inputs: Float32Array[][], outputs: Float32Array[][]) {
     const output = outputs[0][0]
-    if (this.currentOscillator !== null) {
-      this.currentOscillator.speed = this.speed
-      this.currentOscillator.process(output)
-    }
+    const buffer = new Float32Array(output.length)
+
+    Object.values(this.playingOscillators).forEach((oscillator) => {
+      oscillator.speed = this.speed
+      oscillator.process(buffer)
+      addBuffer(buffer, output)
+    })
+
     return true
+  }
+}
+
+const addBuffer = (buffer: Float32Array, toBuffer: Float32Array) => {
+  for (let i = 0; i < buffer.length; i++) {
+    toBuffer[i] += buffer[i]
   }
 }
 

@@ -66,13 +66,13 @@
         })
       }
 
-      const noteOn = (pitch = 24) => {
+      const noteOn = (pitch) => {
         context.resume()
         synth.port.postMessage({ type: "noteOn", pitch })
       }
 
-      const noteOff = () => {
-        synth.port.postMessage({ type: "noteOff" })
+      const noteOff = (pitch) => {
+        synth.port.postMessage({ type: "noteOff", pitch })
       }
 
       const pitchBend = (value) => {
@@ -88,11 +88,11 @@
       }
 
       document.getElementById("button-note-on").onclick = () => {
-        noteOn()
+        noteOn(24)
       }
 
       document.getElementById("button-note-off").onclick = () => {
-        noteOff()
+        noteOff(24)
       }
 
       document.getElementById("button-bend-0").onclick = () => {
@@ -121,7 +121,7 @@
                 noteOn(event.data[1])
                 break
               case 0x80:
-                noteOff()
+                noteOff(event.data[1])
                 break
             }
 
