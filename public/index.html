@@ -17,10 +17,8 @@
 
       const setup = async () => {
         await context.audioWorklet.addModule("js/synth-processor.js")
-        const oscillator = new OscillatorNode(context)
         synth = new AudioWorkletNode(context, "synth-processor")
-        oscillator.connect(synth).connect(context.destination)
-        oscillator.start()
+        synth.connect(context.destination)
       }
 
       const getSampleUrls = () => {
@@ -66,17 +64,32 @@
         })
       }
 
+      const delayTime = context.sampleRate * 0.5
+
       const noteOn = (pitch, velocity = 100) => {
         context.resume()
-        synth.port.postMessage({ type: "noteOn", pitch, velocity })
+        synth.port.postMessage({
+          type: "noteOn",
+          pitch,
+          velocity,
+          delayTime,
+        })
       }
 
       const noteOff = (pitch) => {
-        synth.port.postMessage({ type: "noteOff", pitch })
+        synth.port.postMessage({
+          type: "noteOff",
+          pitch,
+          delayTime,
+        })
       }
 
       const pitchBend = (value) => {
-        synth.port.postMessage({ type: "pitchBend", value })
+        synth.port.postMessage({
+          type: "pitchBend",
+          value,
+          delayTime,
+        })
       }
 
       await setup()

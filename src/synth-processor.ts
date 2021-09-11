@@ -165,14 +165,50 @@ class NoteOscillator {
   }
 }
 
+interface LoadSampleEvent {
+  type: "loadSample"
+  data: Float32Array
+  pitch: number
+}
+
+interface SampleRateEvent {
+  type: "sampleRate"
+  value: number
+}
+
+interface Timestamp {
+  delayTime: number
+}
+
+type NoteOnEvent = Timestamp & {
+  type: "noteOn"
+  velocity: number
+  pitch: number
+}
+
+type NoteOffEvent = Timestamp & {
+  type: "noteOff"
+  pitch: number
+}
+
+type PitchBendEvent = Timestamp & {
+  type: "pitchBend"
+  value: number
+}
+
+type DelayableEvent = NoteOnEvent | NoteOffEvent | PitchBendEvent
+
+type AnyEvent = LoadSampleEvent | SampleRateEvent | DelayableEvent
+
 class SynthProcessor extends AudioWorkletProcessor {
   private oscillators: { [key: number]: NoteOscillator } = {}
   private playingOscillators: { [key: number]: NoteOscillator } = {}
   private speed = 1
+  private eventBuffer: DelayableEvent[] = []
 
   constructor() {
     super()
-    this.port.onmessage = (e) => {
+    this.port.onmessage = (e: MessageEvent<AnyEvent>) => {
       console.log(e.data)
       switch (e.data.type) {
         case "loadSample":
@@ -193,39 +229,57 @@ class SynthProcessor extends AudioWorkletProcessor {
           }
           this.oscillators[e.data.pitch] = new NoteOscillator(sample, envelope)
           break
-        case "noteOn": {
-          const { pitch, velocity } = e.data
-          const oscillator = this.oscillators[pitch]
-          if (oscillator === undefined) {
-            console.warn(`There is no sample for ${pitch}`)
-          } else {
-            this.playingOscillators[pitch] = oscillator
-            const volume = velocity / 0x80
-            oscillator.noteOn(volume)
-          }
-          console.log(
-            "playingOscillators count",
-            Object.values(this.playingOscillators).length
-          )
-          break
-        }
-        case "noteOff": {
-          const { pitch } = e.data
-          const oscillator = this.playingOscillators[pitch]
-          oscillator?.noteOff()
-          delete this.playingOscillators[pitch]
-          break
-        }
-        case "pitchBend":
-          this.speed = e.data.value
-          break
       }
+      if ("delayTime" in e.data) {
+        // handle in process
+        this.eventBuffer.push(e.data)
+      }
+    }
+  }
+
+  handleDelayableEvent(e: DelayableEvent) {
+    switch (e.type) {
+      case "noteOn": {
+        const { pitch, velocity } = e
+        const oscillator = this.oscillators[pitch]
+        if (oscillator === undefined) {
+          console.warn(`There is no sample for ${pitch}`)
+        } else {
+          this.playingOscillators[pitch] = oscillator
+          const volume = velocity / 0x80
+          oscillator.noteOn(volume)
+        }
+        console.log(
+          "playingOscillators count",
+          Object.values(this.playingOscillators).length
+        )
+        break
+      }
+      case "noteOff": {
+        const { pitch } = e
+        const oscillator = this.playingOscillators[pitch]
+        oscillator?.noteOff()
+        delete this.playingOscillators[pitch]
+        break
+      }
+      case "pitchBend":
+        this.speed = e.value
+        break
     }
   }
 
   process(inputs: Float32Array[][], outputs: Float32Array[][]) {
     const output = outputs[0][0]
     const buffer = new Float32Array(output.length)
+
+    this.eventBuffer = this.eventBuffer.filter((e) => {
+      e.delayTime -= output.length
+      if (e.delayTime <= 0) {
+        this.handleDelayableEvent(e)
+        return false
+      }
+      return true
+    })
 
     Object.values(this.playingOscillators).forEach((oscillator) => {
       oscillator.speed = this.speed
