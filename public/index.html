@@ -10,6 +10,7 @@
     <button id="button-bend-1">Bend 10%</button>
     <button id="button-bend-5">Bend 50%</button>
     <button id="button-bend-20">Bend 100%</button>
+    <input id="open" type="file" />
     <div id="keys"></div>
     <script type="module">
       const context = new AudioContext()
@@ -46,8 +47,11 @@
       const createKeyButton = (pitch) => {
         const elm = document.createElement("button")
         elm.textContent = pitch
-        elm.onclick = () => {
+        elm.onpointerdown = () => {
           noteOn(pitch)
+        }
+        elm.onpointerup = () => {
+          noteOff(pitch)
         }
 
         const keyContainer = document.getElementById("keys")
@@ -66,37 +70,41 @@
 
       const delayTime = 0 // context.sampleRate * 0.5
 
-      const noteOn = (pitch, velocity = 100) => {
+      const noteOn = (pitch, velocity = 100, channel = 0) => {
         context.resume()
         synth.port.postMessage({
           type: "noteOn",
           pitch,
           velocity,
           delayTime,
+          channel,
         })
       }
 
-      const noteOff = (pitch) => {
+      const noteOff = (pitch, channel = 0) => {
         synth.port.postMessage({
           type: "noteOff",
           pitch,
           delayTime,
+          channel,
         })
       }
 
-      const pitchBend = (value) => {
+      const pitchBend = (value, channel = 0) => {
         synth.port.postMessage({
           type: "pitchBend",
           value,
           delayTime,
+          channel,
         })
       }
 
-      const volume = (value) => {
+      const volume = (value, channel = 0) => {
         synth.port.postMessage({
           type: "volume",
           value,
           delayTime,
+          channel,
         })
       }
 
@@ -137,7 +145,7 @@
 
         midiAccess.inputs.forEach((entry) => {
           entry.onmidimessage = (event) => {
-            switch (event.data[0]) {
+            switch (event.data[0] & 0xf0) {
               case 0x90:
                 noteOn(event.data[1], event.data[2])
                 break
