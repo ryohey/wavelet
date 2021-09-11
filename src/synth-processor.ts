@@ -191,8 +191,12 @@ class SynthProcessor extends AudioWorkletProcessor {
           this.oscillators[e.data.pitch] = new NoteOscillator(sample, envelope)
           break
         case "noteOn":
-          this.currentOscillator = this.oscillators[e.data.pitch]
-          this.currentOscillator?.noteOn()
+          if (this.oscillators[e.data.pitch] === undefined) {
+            console.warn(`There is no sample for ${e.data.pich}`)
+          } else {
+            this.currentOscillator = this.oscillators[e.data.pitch]
+            this.currentOscillator?.noteOn()
+          }
           break
         case "noteOff":
           this.currentOscillator?.noteOff()
