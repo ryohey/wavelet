@@ -117,6 +117,7 @@ class AmplitudeEnvelope {
 
 class GainFilter {
   private envelope: AmplitudeEnvelope
+  volume: number = 1
 
   constructor(envelope: AmplitudeEnvelope) {
     this.envelope = envelope
@@ -125,7 +126,7 @@ class GainFilter {
   process(input: Float32Array, output: Float32Array) {
     for (let i = 0; i < output.length; ++i) {
       const gain = this.envelope.getAmplitude(i)
-      output[i] = input[i] * gain
+      output[i] = input[i] * gain * this.volume
     }
     this.envelope.advance(output.length)
   }
@@ -142,9 +143,11 @@ class NoteOscillator {
     this.gain = new GainFilter(this.envelope)
   }
 
-  noteOn() {
+  // volume: 0 to 1
+  noteOn(volume: number) {
     this.wave.noteOn()
     this.envelope.noteOn()
+    this.gain.volume = volume
   }
 
   noteOff() {
@@ -191,20 +194,26 @@ class SynthProcessor extends AudioWorkletProcessor {
           this.oscillators[e.data.pitch] = new NoteOscillator(sample, envelope)
           break
         case "noteOn": {
-          const { pitch } = e.data
+          const { pitch, velocity } = e.data
           const oscillator = this.oscillators[pitch]
           if (oscillator === undefined) {
             console.warn(`There is no sample for ${pitch}`)
           } else {
             this.playingOscillators[pitch] = oscillator
-            oscillator.noteOn()
+            const volume = velocity / 0x80
+            oscillator.noteOn(volume)
           }
+          console.log(
+            "playingOscillators count",
+            Object.values(this.playingOscillators).length
+          )
           break
         }
         case "noteOff": {
           const { pitch } = e.data
           const oscillator = this.playingOscillators[pitch]
           oscillator?.noteOff()
+          delete this.playingOscillators[pitch]
           break
         }
         case "pitchBend":
