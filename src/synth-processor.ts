@@ -1,3 +1,5 @@
+import { DelayableEvent, SynthEvent } from "./SynthEvent"
+
 interface Sample {
   buffer: Float32Array
   isOneShot: boolean
@@ -117,6 +119,11 @@ class AmplitudeEnvelope {
 
 class GainFilter {
   private envelope: AmplitudeEnvelope
+
+  // 0 to 1
+  velocity: number = 1
+
+  // 0 to 1
   volume: number = 1
 
   constructor(envelope: AmplitudeEnvelope) {
@@ -124,9 +131,10 @@ class GainFilter {
   }
 
   process(input: Float32Array, output: Float32Array) {
+    const volume = this.velocity * this.volume
     for (let i = 0; i < output.length; ++i) {
       const gain = this.envelope.getAmplitude(i)
-      output[i] = input[i] * gain * this.volume
+      output[i] = input[i] * gain * volume
     }
     this.envelope.advance(output.length)
   }
@@ -143,11 +151,11 @@ class NoteOscillator {
     this.gain = new GainFilter(this.envelope)
   }
 
-  // volume: 0 to 1
-  noteOn(volume: number) {
+  // velocity: 0 to 1
+  noteOn(velocity: number) {
     this.wave.noteOn()
     this.envelope.noteOn()
-    this.gain.volume = volume
+    this.gain.velocity = velocity
   }
 
   noteOff() {
@@ -163,52 +171,26 @@ class NoteOscillator {
   set speed(value: number) {
     this.wave.speed = value
   }
+
+  set volume(value: number) {
+    this.gain.volume = value
+  }
 }
 
-interface LoadSampleEvent {
-  type: "loadSample"
-  data: Float32Array
-  pitch: number
+interface ChannelState {
+  speed: number
+  volume: number
+  playingOscillators: { [key: number]: NoteOscillator }
 }
-
-interface SampleRateEvent {
-  type: "sampleRate"
-  value: number
-}
-
-interface Timestamp {
-  delayTime: number
-}
-
-type NoteOnEvent = Timestamp & {
-  type: "noteOn"
-  velocity: number
-  pitch: number
-}
-
-type NoteOffEvent = Timestamp & {
-  type: "noteOff"
-  pitch: number
-}
-
-type PitchBendEvent = Timestamp & {
-  type: "pitchBend"
-  value: number
-}
-
-type DelayableEvent = NoteOnEvent | NoteOffEvent | PitchBendEvent
-
-type AnyEvent = LoadSampleEvent | SampleRateEvent | DelayableEvent
 
 class SynthProcessor extends AudioWorkletProcessor {
   private oscillators: { [key: number]: NoteOscillator } = {}
-  private playingOscillators: { [key: number]: NoteOscillator } = {}
-  private speed = 1
   private eventBuffer: DelayableEvent[] = []
+  private channels: { [key: number]: ChannelState } = {}
 
   constructor() {
     super()
-    this.port.onmessage = (e: MessageEvent<AnyEvent>) => {
+    this.port.onmessage = (e: MessageEvent<SynthEvent>) => {
       console.log(e.data)
       switch (e.data.type) {
         case "loadSample":
@@ -240,35 +222,54 @@ class SynthProcessor extends AudioWorkletProcessor {
   handleDelayableEvent(e: DelayableEvent) {
     switch (e.type) {
       case "noteOn": {
-        const { pitch, velocity } = e
+        const { pitch, velocity, channel } = e
         const oscillator = this.oscillators[pitch]
         if (oscillator === undefined) {
           console.warn(`There is no sample for ${pitch}`)
         } else {
-          this.playingOscillators[pitch] = oscillator
+          const state = this.getChannel(channel)
+          state.playingOscillators[pitch] = oscillator
           const volume = velocity / 0x80
           oscillator.noteOn(volume)
         }
-        console.log(
-          "playingOscillators count",
-          Object.values(this.playingOscillators).length
-        )
         break
       }
       case "noteOff": {
-        const { pitch } = e
-        const oscillator = this.playingOscillators[pitch]
+        const { pitch, channel } = e
+        const state = this.getChannel(channel)
+        const oscillator = state.playingOscillators[pitch]
         oscillator?.noteOff()
-        delete this.playingOscillators[pitch]
+        delete state.playingOscillators[pitch]
         break
       }
-      case "pitchBend":
-        this.speed = e.value
+      case "pitchBend": {
+        const state = this.getChannel(e.channel)
+        state.speed = e.value
         break
+      }
+      case "volume": {
+        const state = this.getChannel(e.channel)
+        state.volume = e.value / 0x80
+        break
+      }
     }
   }
 
-  process(inputs: Float32Array[][], outputs: Float32Array[][]) {
+  private getChannel(channel: number): ChannelState {
+    const state = this.channels[channel]
+    if (state !== undefined) {
+      return state
+    }
+    const newState: ChannelState = {
+      speed: 1,
+      volume: 1,
+      playingOscillators: [],
+    }
+    this.channels[channel] = newState
+    return newState
+  }
+
+  process(_inputs: Float32Array[][], outputs: Float32Array[][]) {
     const output = outputs[0][0]
     const buffer = new Float32Array(output.length)
 
@@ -281,10 +282,13 @@ class SynthProcessor extends AudioWorkletProcessor {
       return true
     })
 
-    Object.values(this.playingOscillators).forEach((oscillator) => {
-      oscillator.speed = this.speed
-      oscillator.process(buffer)
-      addBuffer(buffer, output)
+    Object.values(this.channels).forEach((state) => {
+      Object.values(state.playingOscillators).forEach((oscillator) => {
+        oscillator.speed = state.speed
+        oscillator.volume = state.volume
+        oscillator.process(buffer)
+        addBuffer(buffer, output)
+      })
     })
 
     return true
