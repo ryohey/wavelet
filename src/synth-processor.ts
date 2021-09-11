@@ -62,7 +62,6 @@ interface AmplitudeEnvelopeParameter {
 
 class AmplitudeEnvelope {
   private parameter: AmplitudeEnvelopeParameter
-  private isPlaying = false
   private isRelease = false
   private time = 0
   private noteOffTime = 0
@@ -73,7 +72,6 @@ class AmplitudeEnvelope {
 
   noteOn() {
     this.time = 0
-    this.isPlaying = true
   }
 
   noteOff() {
@@ -82,29 +80,39 @@ class AmplitudeEnvelope {
   }
 
   getAmplitude(deltaTime: number): number {
-    if (!this.isPlaying) {
-      return 0
-    }
     const time = this.time + deltaTime
     const { attackTime, decayTime, sustainLevel, releaseTime } = this.parameter
 
+    // Release
     if (this.isRelease) {
-      // Release
-      return sustainLevel * (1 - (time - this.noteOffTime) / releaseTime)
+      const relativeTime = time - this.noteOffTime
+      if (relativeTime < releaseTime) {
+        const ratio = relativeTime / releaseTime
+        return sustainLevel * (1 - ratio)
+      }
+      return 0
     }
 
+    // Attack
     if (time < attackTime) {
-      // Attack
       return time / attackTime
     }
 
-    if (time < attackTime + decayTime) {
-      // Decay
-      return 1 - ((1 - sustainLevel) * (time - attackTime)) / decayTime
+    // Decay
+    {
+      const relativeTime = time - attackTime
+      if (relativeTime < decayTime) {
+        const ratio = relativeTime / decayTime
+        return (1 - sustainLevel) * (1 - ratio)
+      }
     }
 
     // Sustain
     return sustainLevel
+  }
+
+  advance(time: number) {
+    this.time += time
   }
 }
 
@@ -117,8 +125,13 @@ class GainFilter {
 
   process(input: Float32Array, output: Float32Array) {
     for (let i = 0; i < output.length; ++i) {
-      output[i] = input[i] * this.envelope.getAmplitude(i)
+      const gain = this.envelope.getAmplitude(i)
+      if (gain > 1) {
+        throw new Error(`gain ${gain}`)
+      }
+      output[i] = input[i] * gain
     }
+    this.envelope.advance(output.length)
   }
 }
 
@@ -147,11 +160,15 @@ class NoteOscillator {
     this.wave.process(output)
     this.gain.process(output, output)
   }
+
+  set speed(value: number) {
+    this.wave.speed = value
+  }
 }
 
 class SynthProcessor extends AudioWorkletProcessor {
-  private oscillators: { [key: number]: WavetableOscillator } = {}
-  private currentOscillator: WavetableOscillator | null = null
+  private oscillators: { [key: number]: NoteOscillator } = {}
+  private currentOscillator: NoteOscillator | null = null
   private speed = 1
 
   constructor() {
@@ -169,7 +186,13 @@ class SynthProcessor extends AudioWorkletProcessor {
             loopStart: e.data.data.length * 0.1,
             loopEnd: e.data.data.length * 0.999,
           }
-          this.oscillators[e.data.pitch] = new WavetableOscillator(sample)
+          const envelope: AmplitudeEnvelopeParameter = {
+            attackTime: 100,
+            decayTime: 1,
+            sustainLevel: 1,
+            releaseTime: 1,
+          }
+          this.oscillators[e.data.pitch] = new NoteOscillator(sample, envelope)
           break
         case "noteOn":
           this.currentOscillator = this.oscillators[e.data.pitch]
