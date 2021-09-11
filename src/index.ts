@@ -1,3 +1,5 @@
+import { MidiFile, read } from "../node_modules/midifile-ts/dist/index"
+
 const context = new AudioContext()
 let synth: AudioWorkletNode
 
@@ -40,9 +42,7 @@ const loadSample = async (url: string, pitch: number) => {
   })
 }
 
-const delayTime = 0 // context.sampleRate * 0.5
-
-const noteOn = (pitch: number, velocity = 100, channel = 0) => {
+const noteOn = (pitch: number, velocity = 100, channel = 0, delayTime = 0) => {
   context.resume()
   synth.port.postMessage({
     type: "noteOn",
@@ -53,7 +53,7 @@ const noteOn = (pitch: number, velocity = 100, channel = 0) => {
   })
 }
 
-const noteOff = (pitch: number, channel = 0) => {
+const noteOff = (pitch: number, channel = 0, delayTime = 0) => {
   synth.port.postMessage({
     type: "noteOff",
     pitch,
@@ -62,7 +62,7 @@ const noteOff = (pitch: number, channel = 0) => {
   })
 }
 
-const pitchBend = (value: number, channel = 0) => {
+const pitchBend = (value: number, channel = 0, delayTime = 0) => {
   synth.port.postMessage({
     type: "pitchBend",
     value,
@@ -71,7 +71,7 @@ const pitchBend = (value: number, channel = 0) => {
   })
 }
 
-const volume = (value: number, channel = 0) => {
+const volume = (value: number, channel = 0, delayTime = 0) => {
   synth.port.postMessage({
     type: "volume",
     value,
@@ -108,10 +108,40 @@ document.getElementById("button-resume")?.addEventListener("click", () => {
   context.resume()
 })
 
+const playMIDI = (midi: MidiFile) => {
+  const timebase = 480 // tickPerBeat
+  const tempo = 120 // beatPerMinutes
+
+  const tickToFrameTime = (tick: number) => {
+    const beat = tick / timebase
+    const sec = beat / (tempo / 60)
+    return context.sampleRate * sec
+  }
+
+  midi.tracks.forEach((events) => {
+    let time = 0
+    events.forEach((e) => {
+      time += e.deltaTime
+      const delayTime = tickToFrameTime(time)
+      if (e.type === "channel") {
+        switch (e.subtype) {
+          case "noteOn":
+            noteOn(e.noteNumber, e.velocity, e.channel, delayTime)
+            break
+          case "noteOff":
+            noteOff(e.noteNumber, e.channel, delayTime)
+            break
+        }
+      }
+    })
+  })
+}
+
 document.getElementById("open")?.addEventListener("change", (e) => {
   const reader = new FileReader()
   reader.onload = () => {
-    console.log(reader.result)
+    const midi = read(reader.result as ArrayBuffer)
+    playMIDI(midi)
   }
   const input = e.currentTarget as HTMLInputElement
   const file = input.files?.[0]
