@@ -62,9 +62,8 @@ interface AmplitudeEnvelopeParameter {
 
 class AmplitudeEnvelope {
   private parameter: AmplitudeEnvelopeParameter
-  private isRelease = false
   private time = 0
-  private noteOffTime = 0
+  private noteOffTime: number | null = null
 
   constructor(parameter: AmplitudeEnvelopeParameter) {
     this.parameter = parameter
@@ -72,10 +71,10 @@ class AmplitudeEnvelope {
 
   noteOn() {
     this.time = 0
+    this.noteOffTime = null
   }
 
   noteOff() {
-    this.isRelease = true
     this.noteOffTime = this.time
   }
 
@@ -84,7 +83,7 @@ class AmplitudeEnvelope {
     const { attackTime, decayTime, sustainLevel, releaseTime } = this.parameter
 
     // Release
-    if (this.isRelease) {
+    if (this.noteOffTime) {
       const relativeTime = time - this.noteOffTime
       if (relativeTime < releaseTime) {
         const ratio = relativeTime / releaseTime
@@ -103,7 +102,7 @@ class AmplitudeEnvelope {
       const relativeTime = time - attackTime
       if (relativeTime < decayTime) {
         const ratio = relativeTime / decayTime
-        return (1 - sustainLevel) * (1 - ratio)
+        return 1 - (1 - sustainLevel) * ratio
       }
     }
 
@@ -126,9 +125,6 @@ class GainFilter {
   process(input: Float32Array, output: Float32Array) {
     for (let i = 0; i < output.length; ++i) {
       const gain = this.envelope.getAmplitude(i)
-      if (gain > 1) {
-        throw new Error(`gain ${gain}`)
-      }
       output[i] = input[i] * gain
     }
     this.envelope.advance(output.length)
@@ -187,10 +183,10 @@ class SynthProcessor extends AudioWorkletProcessor {
             loopEnd: e.data.data.length * 0.999,
           }
           const envelope: AmplitudeEnvelopeParameter = {
-            attackTime: 100,
-            decayTime: 1,
-            sustainLevel: 1,
-            releaseTime: 1,
+            attackTime: 10000,
+            decayTime: 10000,
+            sustainLevel: 0.2,
+            releaseTime: 30000,
           }
           this.oscillators[e.data.pitch] = new NoteOscillator(sample, envelope)
           break
