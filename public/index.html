@@ -9,7 +9,7 @@
     <button id="button-bend-1">Bend 10%</button>
     <button id="button-bend-5">Bend 50%</button>
     <button id="button-bend-20">Bend 100%</button>
-    <input id="open" type="file" />
+    <input id="open" type="file" accept=".mid,.midi" />
     <div id="keys"></div>
     <script type="module">
       const context = new AudioContext()
@@ -133,6 +133,14 @@
 
       document.getElementById("button-resume").onclick = () => {
         context.resume()
+      }
+
+      document.getElementById("open").onchange = (e) => {
+        const reader = new FileReader()
+        reader.onload = () => {
+          console.log(reader.result)
+        }
+        reader.readAsArrayBuffer(e.currentTarget.files[0])
       }
 
       try {
