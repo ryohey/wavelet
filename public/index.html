@@ -4,7 +4,6 @@
     <meta charset="utf-8" />
   </head>
   <body>
-    <button id="button">Start</button>
     <button id="button-note-on">Note on</button>
     <button id="button-note-off">Note off</button>
     <button id="button-bend-0">Bend 0%</button>
@@ -69,6 +68,7 @@
       }
 
       const noteOn = (pitch = 24) => {
+        context.resume()
         synth.port.postMessage({ type: "noteOn", pitch })
       }
 
@@ -86,10 +86,6 @@
       for await (let url of getSampleUrls()) {
         await loadSample(url, pitch++)
         createKeyButton(pitch)
-      }
-
-      document.getElementById("button").onclick = () => {
-        context.resume()
       }
 
       document.getElementById("button-note-on").onclick = () => {

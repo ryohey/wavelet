@@ -183,10 +183,10 @@ class SynthProcessor extends AudioWorkletProcessor {
             loopEnd: e.data.data.length * 0.999,
           }
           const envelope: AmplitudeEnvelopeParameter = {
-            attackTime: 10000,
-            decayTime: 10000,
-            sustainLevel: 0.2,
-            releaseTime: 30000,
+            attackTime: 0,
+            decayTime: 0,
+            sustainLevel: 1,
+            releaseTime: 0,
           }
           this.oscillators[e.data.pitch] = new NoteOscillator(sample, envelope)
           break
