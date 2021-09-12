@@ -132,7 +132,7 @@ const main = async () => {
   })
 
   const playMIDI = (midi: MidiFile) => {
-    const tempo = 120 // beatPerMinutes
+    let tempo = 120 // beatPerMinutes
 
     const tickToFrameTime = (tick: number) => {
       const beat = tick / midi.header.ticksPerBeat
@@ -145,15 +145,21 @@ const main = async () => {
       events.forEach((e) => {
         time += e.deltaTime
         const delayTime = tickToFrameTime(time)
-        if (e.type === "channel") {
-          switch (e.subtype) {
-            case "noteOn":
-              noteOn(e.noteNumber, e.velocity, e.channel, delayTime)
-              break
-            case "noteOff":
-              noteOff(e.noteNumber, e.channel, delayTime)
-              break
-          }
+        switch (e.type) {
+          case "channel":
+            switch (e.subtype) {
+              case "noteOn":
+                noteOn(e.noteNumber, e.velocity, e.channel, delayTime)
+                break
+              case "noteOff":
+                noteOff(e.noteNumber, e.channel, delayTime)
+                break
+            }
+          case "meta":
+            switch (e.subtype) {
+              case "setTempo":
+                tempo = (60 * 1000000) / e.microsecondsPerBeat
+            }
         }
       })
     })
