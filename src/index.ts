@@ -1,6 +1,13 @@
 import { MidiFile, read } from "midifile-ts"
 import { getInstrumentKeys } from "./GMPatchNames"
 import { getSampleUrl } from "./loader"
+import {
+  LoadSampleEvent,
+  NoteOffEvent,
+  NoteOnEvent,
+  PitchBendEvent,
+  VolumeEvent,
+} from "./SynthEvent"
 
 const main = async () => {
   const context = new AudioContext()
@@ -30,13 +37,18 @@ const main = async () => {
     keyContainer?.appendChild(elm)
   }
 
-  const loadSample = async (url: string, pitch: number) => {
+  const loadSample = async (url: string, instrument: number, pitch: number) => {
     const req = await fetch(url)
     const audioData = await req.arrayBuffer()
     console.log(`loaded sample for pitch ${pitch} from ${url}`)
     context.decodeAudioData(audioData, (buffer) => {
       const data = buffer.getChannelData(0)
-      synth.port.postMessage({ type: "loadSample", pitch, data })
+      synth.port.postMessage({
+        type: "loadSample",
+        pitch,
+        data,
+        instrument,
+      } as LoadSampleEvent)
     })
   }
 
@@ -53,7 +65,7 @@ const main = async () => {
       velocity,
       delayTime,
       channel,
-    })
+    } as NoteOnEvent)
   }
 
   const noteOff = (pitch: number, channel = 0, delayTime = 0) => {
@@ -62,7 +74,7 @@ const main = async () => {
       pitch,
       delayTime,
       channel,
-    })
+    } as NoteOffEvent)
   }
 
   const pitchBend = (value: number, channel = 0, delayTime = 0) => {
@@ -71,7 +83,7 @@ const main = async () => {
       value,
       delayTime,
       channel,
-    })
+    } as PitchBendEvent)
   }
 
   const volume = (value: number, channel = 0, delayTime = 0) => {
@@ -80,17 +92,25 @@ const main = async () => {
       value,
       delayTime,
       channel,
-    })
+    } as VolumeEvent)
   }
 
   await setup()
 
+  const progress = document.getElementById("progress") as HTMLProgressElement
+
   const baseUrl = "/midi-js-soundfonts-with-drums/FluidR3_GM/"
-  for await (let instrument of getInstrumentKeys()) {
-    for (let pitch = 21; pitch < 108; pitch++) {
-      const url = getSampleUrl(baseUrl, instrument, pitch)
-      await loadSample(url, pitch++)
+  const instrumentKeys = getInstrumentKeys()
+  const minPitch = 21
+  const maxPitch = 107
+
+  progress.max = instrumentKeys.length
+  for (let instrument = 0; instrument < instrumentKeys.length; instrument++) {
+    for (let pitch = minPitch; pitch <= maxPitch; pitch++) {
+      const url = getSampleUrl(baseUrl, instrumentKeys[instrument], pitch)
+      await loadSample(url, instrument, pitch)
     }
+    progress.value++
   }
 
   document.getElementById("button-bend-0")?.addEventListener("click", () => {

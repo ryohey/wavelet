@@ -2,6 +2,7 @@ export interface LoadSampleEvent {
   type: "loadSample"
   data: Float32Array
   pitch: number
+  instrument: number // GM Patch Number
 }
 
 interface DelayTime {
@@ -43,4 +44,4 @@ export type DelayableEvent =
   | PitchBendEvent
   | VolumeEvent
 
-export type SynthEvent = LoadSampleEvent | SampleRateEvent | DelayableEvent
+export type SynthEvent = LoadSampleEvent | DelayableEvent
