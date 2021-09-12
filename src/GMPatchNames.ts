@@ -10,7 +10,7 @@ const GM_PATCH_NAMES = [
   "Electric Piano 1",
   "Electric Piano 2",
   "Harpsichord",
-  "Clavichord",
+  "Clavinet",
   // --
   //  Tuned Idiophones
   // ++
@@ -71,11 +71,11 @@ const GM_PATCH_NAMES = [
   // ++
   "String Ensemble 1",
   "String Ensemble 2",
-  "SynthStrings 1",
-  "SynthStrings 2",
+  "Synth Strings 1",
+  "Synth Strings 2",
   "Choir Aahs",
   "Voice Oohs",
-  "Synth Voice",
+  "Synth Choir",
   "Orchestra Hit",
   // --
   //  Brass
@@ -86,8 +86,8 @@ const GM_PATCH_NAMES = [
   "Muted Trumpet",
   "French Horn",
   "Brass Section",
-  "SynthBrass 1",
-  "SynthBrass 2",
+  "Synth Brass 1",
+  "Synth Brass 2",
   // --
   //  Reeds
   // ++
@@ -120,7 +120,7 @@ const GM_PATCH_NAMES = [
   "Lead 5 (charang)",
   "Lead 6 (voice)",
   "Lead 7 (fifths)",
-  "Lead 8 (bass + lead)",
+  "Lead 8 (bass__lead)",
   // --
   //  Synth Pads
   // ++
@@ -151,7 +151,7 @@ const GM_PATCH_NAMES = [
   "Shamisen",
   "Koto",
   "Kalimba",
-  "Bag pipe",
+  "Bagpipe",
   "Fiddle",
   "Shanai",
   // --
@@ -181,7 +181,7 @@ const GM_PATCH_NAMES = [
 const getInstrumentKey = (name: string) =>
   name
     .toLocaleLowerCase()
-    .replaceAll(/[^a-z0-9 ]/gm, "")
+    .replaceAll(/[^a-z0-9_ ]/gm, "")
     .replaceAll(/\s+/gm, "_")
 
 export const getInstrumentKeys = () => GM_PATCH_NAMES.map(getInstrumentKey)
