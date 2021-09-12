@@ -4,7 +4,7 @@
   "description": "A wavetable synthesizer that never stops the UI thread created by AudioWorklet.",
   "main": "index.js",
   "scripts": {
-    "start": "concurrently \"npm run serve-https\" \"npm run watch\"",
+    "start": "rollup --config --watch",
     "serve": "http-server public -c-1 --cors",
     "serve-https": "http-server public -c-1 . --ssl --key ./cert/localhost+1-key.pem --cert ./cert/localhost+1.pem",
     "watch": "tsc --watch"
@@ -12,8 +12,13 @@
   "author": "ryohey",
   "license": "MIT",
   "devDependencies": {
+    "@rollup/plugin-commonjs": "^20.0.0",
+    "@rollup/plugin-node-resolve": "^13.0.4",
+    "@rollup/plugin-typescript": "^8.2.5",
     "concurrently": "^6.2.1",
     "http-server": "^13.0.1",
+    "rollup": "^2.56.3",
+    "rollup-plugin-serve": "^1.1.0",
     "typescript": "^4.4.2"
   },
   "dependencies": {
