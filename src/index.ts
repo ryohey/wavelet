@@ -132,11 +132,10 @@ const main = async () => {
   })
 
   const playMIDI = (midi: MidiFile) => {
-    const timebase = 480 // tickPerBeat
     const tempo = 120 // beatPerMinutes
 
     const tickToFrameTime = (tick: number) => {
-      const beat = tick / timebase
+      const beat = tick / midi.header.ticksPerBeat
       const sec = beat / (tempo / 60)
       return context.sampleRate * sec
     }
