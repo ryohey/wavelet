@@ -42,3 +42,5 @@ dist
 public/js
 **/tsconfig.tsbuildinfo
 .rollup.cache
+
+public/js/midi-js-soundfonts-with-drums

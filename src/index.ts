@@ -1,4 +1,6 @@
 import { MidiFile, read } from "midifile-ts"
+import { getInstrumentKeys } from "./GMPatchNames"
+import { getSampleUrl } from "./loader"
 
 const main = async () => {
   const context = new AudioContext()
@@ -12,28 +14,6 @@ const main = async () => {
     }
     synth = new AudioWorkletNode(context, "synth-processor")
     synth.connect(context.destination)
-  }
-
-  const getSampleUrls = () => {
-    const baseUrl = "/midi-js-soundfonts/MusyngKite/clarinet-mp3/"
-    const ext = ".mp3"
-    const keys = [
-      "C",
-      "Db",
-      "D",
-      "Eb",
-      "E",
-      "F",
-      "Gb",
-      "G",
-      "Ab",
-      "A",
-      "Bb",
-      "B",
-    ]
-    return [1, 2, 3, 4, 5, 6, 7].flatMap((oct) =>
-      keys.map((key) => `${baseUrl}${key}${oct}${ext}`)
-    )
   }
 
   const createKeyButton = (pitch: number) => {
@@ -105,10 +85,12 @@ const main = async () => {
 
   await setup()
 
-  let pitch = 0
-  for await (let url of getSampleUrls()) {
-    await loadSample(url, pitch++)
-    createKeyButton(pitch)
+  const baseUrl = "/midi-js-soundfonts-with-drums/FluidR3_GM/"
+  for await (let instrument of getInstrumentKeys()) {
+    for (let pitch = 21; pitch < 108; pitch++) {
+      const url = getSampleUrl(baseUrl, instrument, pitch)
+      await loadSample(url, pitch++)
+    }
   }
 
   document.getElementById("button-bend-0")?.addEventListener("click", () => {
