@@ -38,10 +38,19 @@ export type VolumeEvent = DelayTime &
     value: number
   }
 
+export type ProgramChangeEvent = DelayTime &
+  Channel & {
+    type: "programChange"
+    value: number
+  }
+
 export type DelayableEvent =
   | NoteOnEvent
   | NoteOffEvent
   | PitchBendEvent
   | VolumeEvent
+  | ProgramChangeEvent
 
 export type SynthEvent = LoadSampleEvent | DelayableEvent
+
+export const DrumInstrumentNumber = 128

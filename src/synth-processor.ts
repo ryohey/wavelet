@@ -218,7 +218,12 @@ class SynthProcessor extends AudioWorkletProcessor {
     }
   }
 
-  getOscillator(instrument: number, pitch: number): NoteOscillator | null {
+  getOscillator(channel: number, pitch: number): NoteOscillator | null {
+    const state = this.getChannel(channel)
+
+    // Play drums for CH.10
+    const instrument = channel === 9 ? 128 : state.instrument
+
     if (this.samples[instrument] === undefined) {
       return null
     }
@@ -241,9 +246,11 @@ class SynthProcessor extends AudioWorkletProcessor {
       case "noteOn": {
         const { pitch, velocity, channel } = e
         const state = this.getChannel(channel)
-        const oscillator = this.getOscillator(state.instrument, pitch)
+        const oscillator = this.getOscillator(channel, pitch)
         if (oscillator === null) {
-          console.warn(`There is no sample for ${pitch}`)
+          console.warn(
+            `There is no sample for noteNumber ${pitch} in instrument ${state.instrument}`
+          )
         } else {
           const state = this.getChannel(channel)
           state.playingOscillators[pitch] = oscillator
@@ -268,6 +275,11 @@ class SynthProcessor extends AudioWorkletProcessor {
       case "volume": {
         const state = this.getChannel(e.channel)
         state.volume = e.value / 0x80
+        break
+      }
+      case "programChange": {
+        const state = this.getChannel(e.channel)
+        state.instrument = e.value
         break
       }
     }

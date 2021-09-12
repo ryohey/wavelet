@@ -1,13 +1,7 @@
 import { MidiFile, read } from "midifile-ts"
 import { getInstrumentKeys } from "./GMPatchNames"
 import { getSampleUrl } from "./loader"
-import {
-  LoadSampleEvent,
-  NoteOffEvent,
-  NoteOnEvent,
-  PitchBendEvent,
-  VolumeEvent,
-} from "./SynthEvent"
+import * as SynthEvent from "./SynthEvent"
 
 const main = async () => {
   const context = new AudioContext()
@@ -43,12 +37,13 @@ const main = async () => {
     console.log(`loaded sample for pitch ${pitch} from ${url}`)
     context.decodeAudioData(audioData, (buffer) => {
       const data = buffer.getChannelData(0)
-      synth.port.postMessage({
+      const e: SynthEvent.LoadSampleEvent = {
         type: "loadSample",
         pitch,
         data,
         instrument,
-      } as LoadSampleEvent)
+      }
+      synth.port.postMessage(e)
     })
   }
 
@@ -59,59 +54,78 @@ const main = async () => {
     delayTime = 0
   ) => {
     context.resume()
-    synth.port.postMessage({
+
+    const e: SynthEvent.NoteOnEvent = {
       type: "noteOn",
       pitch,
       velocity,
       delayTime,
       channel,
-    } as NoteOnEvent)
+    }
+    synth.port.postMessage(e)
   }
 
   const noteOff = (pitch: number, channel = 0, delayTime = 0) => {
-    synth.port.postMessage({
+    const e: SynthEvent.NoteOffEvent = {
       type: "noteOff",
       pitch,
       delayTime,
       channel,
-    } as NoteOffEvent)
+    }
+    synth.port.postMessage(e)
   }
 
   const pitchBend = (value: number, channel = 0, delayTime = 0) => {
-    synth.port.postMessage({
+    const e: SynthEvent.PitchBendEvent = {
       type: "pitchBend",
       value,
       delayTime,
       channel,
-    } as PitchBendEvent)
+    }
+    synth.port.postMessage(e)
   }
 
   const volume = (value: number, channel = 0, delayTime = 0) => {
-    synth.port.postMessage({
+    const e: SynthEvent.VolumeEvent = {
       type: "volume",
       value,
       delayTime,
       channel,
-    } as VolumeEvent)
+    }
+    synth.port.postMessage(e)
+  }
+
+  const programChange = (value: number, channel = 0, delayTime = 0) => {
+    const e: SynthEvent.ProgramChangeEvent = {
+      type: "programChange",
+      delayTime,
+      channel,
+      value,
+    }
+    synth.port.postMessage(e)
   }
 
   await setup()
 
-  const progress = document.getElementById("progress") as HTMLProgressElement
+  const loadAllSamples = async () => {
+    const progress = document.getElementById("progress") as HTMLProgressElement
 
-  const baseUrl = "/midi-js-soundfonts-with-drums/FluidR3_GM/"
-  const instrumentKeys = getInstrumentKeys()
-  const minPitch = 21
-  const maxPitch = 107
+    const baseUrl = "/midi-js-soundfonts-with-drums/FluidR3_GM/"
+    const instrumentKeys = [...getInstrumentKeys(), "drums"] // Use 128 to drum
+    const minPitch = 21
+    const maxPitch = 107
 
-  progress.max = instrumentKeys.length
-  for (let instrument = 0; instrument < instrumentKeys.length; instrument++) {
-    for (let pitch = minPitch; pitch <= maxPitch; pitch++) {
-      const url = getSampleUrl(baseUrl, instrumentKeys[instrument], pitch)
-      await loadSample(url, instrument, pitch)
+    progress.max = instrumentKeys.length
+    for (let instrument = 0; instrument < instrumentKeys.length; instrument++) {
+      for (let pitch = minPitch; pitch <= maxPitch; pitch++) {
+        const url = getSampleUrl(baseUrl, instrumentKeys[instrument], pitch)
+        await loadSample(url, instrument, pitch)
+      }
+      progress.value++
     }
-    progress.value++
   }
+
+  loadAllSamples()
 
   document.getElementById("button-bend-0")?.addEventListener("click", () => {
     pitchBend(1)
@@ -156,11 +170,15 @@ const main = async () => {
               case "noteOff":
                 noteOff(e.noteNumber, e.channel, delayTime)
                 break
+              case "programChange":
+                programChange(e.value, e.channel, delayTime)
+                break
             }
           case "meta":
             switch (e.subtype) {
               case "setTempo":
                 tempo = (60 * 1000000) / e.microsecondsPerBeat
+                break
             }
         }
       })
