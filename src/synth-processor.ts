@@ -220,6 +220,7 @@ class SynthProcessor extends AudioWorkletProcessor {
   }
 
   handleDelayableEvent(e: DelayableEvent) {
+    console.log("handle delayable event", e)
     switch (e.type) {
       case "noteOn": {
         const { pitch, velocity, channel } = e

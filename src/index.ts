@@ -31,7 +31,7 @@ const main = async () => {
       "Bb",
       "B",
     ]
-    return [1, 2, 3].flatMap((oct) =>
+    return [1, 2, 3, 4, 5, 6, 7].flatMap((oct) =>
       keys.map((key) => `${baseUrl}${key}${oct}${ext}`)
     )
   }
