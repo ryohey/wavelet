@@ -184,6 +184,9 @@ interface ChannelState {
   playingOscillators: { [key: number]: NoteOscillator }
 }
 
+const RHYTHM_CHANNEL = 9
+const RHYTHM_INSTRUMENT = 128
+
 class SynthProcessor extends AudioWorkletProcessor {
   private samples: { [instrument: number]: { [pitch: number]: Sample } } = {}
   private eventBuffer: DelayableEvent[] = []
@@ -201,7 +204,7 @@ class SynthProcessor extends AudioWorkletProcessor {
             buffer: data,
             sampleStart: 0,
             sampleEnd: data.length,
-            isOneShot: false,
+            isOneShot: true,
             loopStart: data.length * 0.1,
             loopEnd: data.length * 0.999,
           }
@@ -222,7 +225,8 @@ class SynthProcessor extends AudioWorkletProcessor {
     const state = this.getChannel(channel)
 
     // Play drums for CH.10
-    const instrument = channel === 9 ? 128 : state.instrument
+    const instrument =
+      channel === RHYTHM_CHANNEL ? RHYTHM_INSTRUMENT : state.instrument
 
     if (this.samples[instrument] === undefined) {
       return null
@@ -235,7 +239,7 @@ class SynthProcessor extends AudioWorkletProcessor {
       attackTime: 0,
       decayTime: 0,
       sustainLevel: 1,
-      releaseTime: 0,
+      releaseTime: 1000,
     }
     return new NoteOscillator(sample, envelope)
   }
@@ -261,6 +265,10 @@ class SynthProcessor extends AudioWorkletProcessor {
       }
       case "noteOff": {
         const { pitch, channel } = e
+        if (channel === RHYTHM_CHANNEL) {
+          // ignore note off
+          break
+        }
         const state = this.getChannel(channel)
         const oscillator = state.playingOscillators[pitch]
         oscillator?.noteOff()
