@@ -1,6 +1,7 @@
 import { MidiFile, read } from "midifile-ts"
+import stringToArrayBuffer from "string-to-arraybuffer"
 import { getInstrumentKeys } from "./GMPatchNames"
-import { getSampleUrl } from "./loader"
+import { getKeyName, getSampleJSUrl } from "./loader"
 import * as SynthEvent from "./SynthEvent"
 
 const main = async () => {
@@ -31,20 +32,37 @@ const main = async () => {
     keyContainer?.appendChild(elm)
   }
 
-  const loadSample = async (url: string, instrument: number, pitch: number) => {
+  const loadSamples = async (instrument: number) => {
+    const baseUrl = "/midi-js-soundfonts-with-drums/FluidR3_GM/"
+    const instrumentKeys = [...getInstrumentKeys(), "drums"] // Use 128 to drum
+    const instrumentKey = instrumentKeys[instrument]
+    const url = getSampleJSUrl(baseUrl, instrumentKey)
     const req = await fetch(url)
-    const audioData = await req.arrayBuffer()
-    console.log(`loaded sample for pitch ${pitch} from ${url}`)
-    context.decodeAudioData(audioData, (buffer) => {
-      const data = buffer.getChannelData(0)
-      const e: SynthEvent.LoadSampleEvent = {
-        type: "loadSample",
-        pitch,
-        data,
-        instrument,
+    const script = await req.text()
+    const sampleTable = eval(script)
+    for (let pitch = 21; pitch <= 107; pitch++) {
+      const keyName = getKeyName(pitch)
+      const base64Audio = sampleTable[keyName]
+      if (base64Audio !== undefined) {
+        const audioData = stringToArrayBuffer(base64Audio)
+        console.log(
+          `loaded sample for ${keyName} instrument ${instrumentKey} from ${url}`
+        )
+        try {
+          const buffer = await context.decodeAudioData(audioData)
+          const data = buffer.getChannelData(0)
+          const e: SynthEvent.LoadSampleEvent = {
+            type: "loadSample",
+            pitch,
+            data,
+            instrument,
+          }
+          synth.port.postMessage(e)
+        } catch (e) {
+          console.error("failed to decode audio", e)
+        }
       }
-      synth.port.postMessage(e)
-    })
+    }
   }
 
   const noteOn = (
@@ -110,17 +128,9 @@ const main = async () => {
   const loadAllSamples = async () => {
     const progress = document.getElementById("progress") as HTMLProgressElement
 
-    const baseUrl = "/midi-js-soundfonts-with-drums/FluidR3_GM/"
-    const instrumentKeys = [...getInstrumentKeys(), "drums"] // Use 128 to drum
-    const minPitch = 21
-    const maxPitch = 107
-
-    progress.max = instrumentKeys.length
-    for (let instrument = 0; instrument < instrumentKeys.length; instrument++) {
-      for (let pitch = minPitch; pitch <= maxPitch; pitch++) {
-        const url = getSampleUrl(baseUrl, instrumentKeys[instrument], pitch)
-        await loadSample(url, instrument, pitch)
-      }
+    progress.max = 128
+    for (let instrument = 0; instrument <= 128; instrument++) {
+      await loadSamples(instrument)
       progress.value++
     }
   }

@@ -11,7 +11,7 @@ const output = {
 }
 
 const plugins = [
-  nodeResolve({ preferBuiltins: false }),
+  nodeResolve({ preferBuiltins: false, browser: true }),
   commonjs(),
   rollupTypescript(),
 ]
