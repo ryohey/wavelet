@@ -39,6 +39,7 @@ const main = async () => {
   })
 
   document.getElementById("open")?.addEventListener("change", (e) => {
+    context.resume()
     const reader = new FileReader()
     reader.onload = () => {
       const midi = read(reader.result as ArrayBuffer)
