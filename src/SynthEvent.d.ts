@@ -1,6 +1,6 @@
 export interface LoadSampleEvent {
   type: "loadSample"
-  data: Float32Array
+  data: ArrayBuffer
   pitch: number
   instrument: number // GM Patch Number
 }

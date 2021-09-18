@@ -228,7 +228,8 @@ class SynthProcessor extends AudioWorkletProcessor {
       logger.log(e.data)
       switch (e.data.type) {
         case "loadSample":
-          const { data, instrument, pitch } = e.data
+          const { instrument, pitch } = e.data
+          const data = new Float32Array(e.data.data)
           logger.log(`sample length ${data.length}`)
           const sample: Sample = {
             buffer: data,

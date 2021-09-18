@@ -36,7 +36,7 @@ export const getSampleJSUrl = (baseUrl: string, instrument: string) => {
 const loadSamples = async (
   instrument: number,
   context: AudioContext,
-  postMessage: (e: SynthEvent) => void
+  postMessage: (e: SynthEvent, transfer?: Transferable[]) => void
 ) => {
   const baseUrl = "/midi-js-soundfonts-with-drums/FluidR3_GM/"
   const instrumentKeys = [...getInstrumentKeys(), "drums"] // Use 128 to drum
@@ -56,12 +56,15 @@ const loadSamples = async (
       try {
         const buffer = await context.decodeAudioData(audioData)
         const data = buffer.getChannelData(0)
-        postMessage({
-          type: "loadSample",
-          pitch,
-          data,
-          instrument,
-        })
+        postMessage(
+          {
+            type: "loadSample",
+            pitch,
+            instrument,
+            data: data.buffer,
+          },
+          [data.buffer] // transfer instead of copy
+        )
       } catch (e) {
         console.error("failed to decode audio", e)
       }
@@ -72,7 +75,7 @@ const loadSamples = async (
 export const loadAllSamples = async (
   context: AudioContext,
   postMessage: (e: SynthEvent) => void,
-  onProgress: (progress: number) => void
+  onProgress: (progress: number, transfer?: Transferable[]) => void
 ) => {
   let progress = 0
 

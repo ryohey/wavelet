@@ -18,8 +18,11 @@ const main = async () => {
     synth.connect(context.destination)
   }
 
-  const postSynthMessage = (e: SynthEvent.SynthEvent) => {
-    synth.port.postMessage(e)
+  const postSynthMessage = (
+    e: SynthEvent.SynthEvent,
+    transfer?: Transferable[]
+  ) => {
+    synth.port.postMessage(e, transfer ?? [])
   }
 
   await setup()
