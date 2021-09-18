@@ -55,12 +55,14 @@ class WavetableOscillator {
 
       this.sampleIndex += speed
 
-      if (this.sample.loop !== null) {
-        if (this.sampleIndex >= this.sample.loop.end && this.isLooping) {
-          this.sampleIndex = this.sample.loop.start
-        } else if (this.sampleIndex >= this.sample.sampleEnd) {
-          this.isPlaying = false
-        }
+      if (
+        this.sample.loop !== null &&
+        this.sampleIndex >= this.sample.loop.end &&
+        this.isLooping
+      ) {
+        this.sampleIndex = this.sample.loop.start
+      } else if (this.sampleIndex >= this.sample.sampleEnd) {
+        this.isPlaying = false
       }
     }
   }
