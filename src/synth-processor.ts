@@ -29,7 +29,7 @@ class WavetableOscillator {
     this.isPlaying = true
     this.isLooping = this.sample.loop !== null
     this.sampleIndex = this.sample.sampleStart
-    this.baseSpeed = 1 + (pitch - this.sample.pitch) / 12
+    this.baseSpeed = Math.pow(2, (pitch - this.sample.pitch) / 12)
   }
 
   noteOff() {
