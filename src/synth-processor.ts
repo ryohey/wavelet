@@ -7,6 +7,7 @@ interface SampleLoop {
 
 interface Sample {
   buffer: Float32Array
+  pitch: number
   loop: SampleLoop | null
   sampleStart: number
   sampleEnd: number
@@ -17,16 +18,18 @@ class WavetableOscillator {
   private sampleIndex = 0
   private isPlaying = false
   private isLooping = false
+  private baseSpeed = 1
   speed = 1
 
   constructor(sample: Sample) {
     this.sample = sample
   }
 
-  noteOn() {
+  noteOn(pitch: number) {
     this.isPlaying = true
     this.isLooping = this.sample.loop !== null
     this.sampleIndex = this.sample.sampleStart
+    this.baseSpeed = 1 + (pitch - this.sample.pitch) / 12
   }
 
   noteOff() {
@@ -39,6 +42,8 @@ class WavetableOscillator {
       return
     }
 
+    const speed = this.baseSpeed * this.speed
+
     for (let i = 0; i < output.length; ++i) {
       if (this.isPlaying) {
         const index = Math.floor(this.sampleIndex)
@@ -48,7 +53,7 @@ class WavetableOscillator {
         output[i] = 0
       }
 
-      this.sampleIndex += this.speed
+      this.sampleIndex += speed
 
       if (this.sample.loop !== null) {
         if (this.sampleIndex >= this.sample.loop.end && this.isLooping) {
@@ -158,8 +163,8 @@ class NoteOscillator {
   }
 
   // velocity: 0 to 1
-  noteOn(velocity: number) {
-    this.wave.noteOn()
+  noteOn(pitch: number, velocity: number) {
+    this.wave.noteOn(pitch)
     this.envelope.noteOn()
     this.gain.velocity = velocity
   }
@@ -235,6 +240,7 @@ class SynthProcessor extends AudioWorkletProcessor {
           logger.log(`sample length ${data.length}`)
           const sample: Sample = {
             buffer: data,
+            pitch,
             sampleStart: 0,
             sampleEnd: data.length,
             loop: null,
@@ -290,7 +296,7 @@ class SynthProcessor extends AudioWorkletProcessor {
           const state = this.getChannel(channel)
           state.playingOscillators[pitch] = oscillator
           const volume = velocity / 0x80
-          oscillator.noteOn(volume)
+          oscillator.noteOn(pitch, volume)
         }
         break
       }
