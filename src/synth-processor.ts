@@ -217,9 +217,11 @@ interface ChannelState {
 const RHYTHM_CHANNEL = 9
 const RHYTHM_INSTRUMENT = 128
 
+type DelayedEvent = DelayableEvent & { receivedFrame: number }
+
 class SynthProcessor extends AudioWorkletProcessor {
   private samples: { [instrument: number]: { [pitch: number]: Sample } } = {}
-  private eventBuffer: DelayableEvent[] = []
+  private eventBuffer: DelayedEvent[] = []
   private channels: { [key: number]: ChannelState } = {}
 
   constructor() {
@@ -245,7 +247,7 @@ class SynthProcessor extends AudioWorkletProcessor {
       }
       if ("delayTime" in e.data) {
         // handle in process
-        this.eventBuffer.push(e.data)
+        this.eventBuffer.push({ ...e.data, receivedFrame: currentFrame })
       }
     }
   }
@@ -342,8 +344,7 @@ class SynthProcessor extends AudioWorkletProcessor {
     const buffer = new Float32Array(output.length)
 
     this.eventBuffer = this.eventBuffer.filter((e) => {
-      e.delayTime -= output.length
-      if (e.delayTime <= 0) {
+      if (e.receivedFrame + e.delayTime <= currentFrame) {
         this.handleDelayableEvent(e)
         return false
       }
