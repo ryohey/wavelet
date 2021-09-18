@@ -16,7 +16,7 @@ interface Sample {
 class WavetableOscillator {
   private sample: Sample
   private sampleIndex = 0
-  private isPlaying = false
+  private _isPlaying = false
   private isLooping = false
   private baseSpeed = 1
   speed = 1
@@ -26,7 +26,7 @@ class WavetableOscillator {
   }
 
   noteOn(pitch: number) {
-    this.isPlaying = true
+    this._isPlaying = true
     this.isLooping = this.sample.loop !== null
     this.sampleIndex = this.sample.sampleStart
     this.baseSpeed = Math.pow(2, (pitch - this.sample.pitch) / 12)
@@ -38,14 +38,14 @@ class WavetableOscillator {
   }
 
   process(output: Float32Array) {
-    if (!this.isPlaying) {
+    if (!this._isPlaying) {
       return
     }
 
     const speed = this.baseSpeed * this.speed
 
     for (let i = 0; i < output.length; ++i) {
-      if (this.isPlaying) {
+      if (this._isPlaying) {
         const index = Math.floor(this.sampleIndex)
         output[i] = this.sample.buffer[index]
       } else {
@@ -62,9 +62,13 @@ class WavetableOscillator {
       ) {
         this.sampleIndex = this.sample.loop.start
       } else if (this.sampleIndex >= this.sample.sampleEnd) {
-        this.isPlaying = false
+        this._isPlaying = false
       }
     }
+  }
+
+  get isPlaying() {
+    return this._isPlaying
   }
 }
 
@@ -188,6 +192,10 @@ class NoteOscillator {
   set volume(value: number) {
     this.gain.volume = value
   }
+
+  get isPlaying() {
+    return this.wave.isPlaying
+  }
 }
 
 class Logger {
@@ -297,7 +305,7 @@ class SynthProcessor extends AudioWorkletProcessor {
           logger.warn(
             `There is no sample for noteNumber ${pitch} in instrument ${state.instrument}`
           )
-        } else {
+        } else if (!oscillator.isPlaying) {
           const state = this.getChannel(channel)
           state.playingOscillators[pitch] = oscillator
           const volume = velocity / 0x80
