@@ -177,6 +177,30 @@ class NoteOscillator {
   }
 }
 
+class Logger {
+  enabled = true
+
+  log(...args: any) {
+    if (this.enabled) {
+      console.log(...args)
+    }
+  }
+
+  warn(...args: any) {
+    if (this.enabled) {
+      console.warn(...args)
+    }
+  }
+
+  error(...args: any) {
+    if (this.enabled) {
+      console.error(...args)
+    }
+  }
+}
+
+const logger = new Logger()
+
 interface ChannelState {
   speed: number
   volume: number
@@ -195,11 +219,11 @@ class SynthProcessor extends AudioWorkletProcessor {
   constructor() {
     super()
     this.port.onmessage = (e: MessageEvent<SynthEvent>) => {
-      console.log(e.data)
+      logger.log(e.data)
       switch (e.data.type) {
         case "loadSample":
           const { data, instrument, pitch } = e.data
-          console.log(`sample length ${data.length}`)
+          logger.log(`sample length ${data.length}`)
           const sample: Sample = {
             buffer: data,
             sampleStart: 0,
@@ -245,14 +269,14 @@ class SynthProcessor extends AudioWorkletProcessor {
   }
 
   handleDelayableEvent(e: DelayableEvent) {
-    console.log("handle delayable event", e)
+    logger.log("handle delayable event", e)
     switch (e.type) {
       case "noteOn": {
         const { pitch, velocity, channel } = e
         const state = this.getChannel(channel)
         const oscillator = this.getOscillator(channel, pitch)
         if (oscillator === null) {
-          console.warn(
+          logger.warn(
             `There is no sample for noteNumber ${pitch} in instrument ${state.instrument}`
           )
         } else {
@@ -337,6 +361,10 @@ class SynthProcessor extends AudioWorkletProcessor {
 const addBuffer = (buffer: Float32Array, toBuffer: Float32Array) => {
   for (let i = 0; i < buffer.length; i++) {
     toBuffer[i] += buffer[i]
+    const level = toBuffer[i]
+    if (level > 1) {
+      logger.warn(`clipping level: ${level}`)
+    }
   }
 }
 
