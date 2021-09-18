@@ -15,6 +15,7 @@
     "@rollup/plugin-commonjs": "^20.0.0",
     "@rollup/plugin-node-resolve": "^13.0.4",
     "@rollup/plugin-typescript": "^8.2.5",
+    "@types/audioworklet": "0.0.19",
     "concurrently": "^6.2.1",
     "http-server": "^13.0.1",
     "rollup": "^2.56.3",
