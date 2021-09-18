@@ -45,7 +45,8 @@ const loadSamples = async (
   const req = await fetch(url)
   const script = await req.text()
   const sampleTable = eval(script)
-  for (let pitch = 21; pitch <= 107; pitch++) {
+  const step = instrument !== 128 ? 12 : 1
+  for (let pitch = 21; pitch <= 107; pitch += step) {
     const keyName = getKeyName(pitch)
     const base64Audio = sampleTable[keyName]
     if (base64Audio !== undefined) {
@@ -56,14 +57,17 @@ const loadSamples = async (
       try {
         const buffer = await context.decodeAudioData(audioData)
         const data = buffer.getChannelData(0)
+
+        const audioBuffer = data.buffer.slice(0)
         postMessage(
           {
             type: "loadSample",
             pitch,
             instrument,
-            data: data.buffer,
+            data: audioBuffer,
+            keyRange: [pitch, pitch + step],
           },
-          [data.buffer] // transfer instead of copy
+          [audioBuffer] // transfer instead of copy
         )
       } catch (e) {
         console.error("failed to decode audio", e)

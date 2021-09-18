@@ -235,7 +235,7 @@ class SynthProcessor extends AudioWorkletProcessor {
       logger.log(e.data)
       switch (e.data.type) {
         case "loadSample":
-          const { instrument, pitch } = e.data
+          const { instrument, pitch, keyRange } = e.data
           const data = new Float32Array(e.data.data)
           logger.log(`sample length ${data.length}`)
           const sample: Sample = {
@@ -245,10 +245,13 @@ class SynthProcessor extends AudioWorkletProcessor {
             sampleEnd: data.length,
             loop: null,
           }
-          if (this.samples[instrument] === undefined) {
-            this.samples[instrument] = {}
+
+          for (let i = keyRange[0]; i < keyRange[1]; i++) {
+            if (this.samples[instrument] === undefined) {
+              this.samples[instrument] = {}
+            }
+            this.samples[instrument][i] = sample
           }
-          this.samples[instrument][pitch] = sample
           break
       }
       if ("delayTime" in e.data) {

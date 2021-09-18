@@ -3,6 +3,7 @@ export interface LoadSampleEvent {
   data: ArrayBuffer
   pitch: number
   instrument: number // GM Patch Number
+  keyRange: [number, number]
 }
 
 interface DelayTime {
