@@ -1,10 +1,13 @@
 import { DelayableEvent, SynthEvent } from "./SynthEvent"
 
+interface SampleLoop {
+  start: number
+  end: number
+}
+
 interface Sample {
   buffer: Float32Array
-  isOneShot: boolean
-  loopStart: number
-  loopEnd: number
+  loop: SampleLoop | null
   sampleStart: number
   sampleEnd: number
 }
@@ -22,7 +25,7 @@ class WavetableOscillator {
 
   noteOn() {
     this.isPlaying = true
-    this.isLooping = !this.sample.isOneShot
+    this.isLooping = this.sample.loop !== null
     this.sampleIndex = this.sample.sampleStart
   }
 
@@ -46,10 +49,13 @@ class WavetableOscillator {
       }
 
       this.sampleIndex += this.speed
-      if (this.sampleIndex >= this.sample.loopEnd && this.isLooping) {
-        this.sampleIndex = this.sample.loopStart
-      } else if (this.sampleIndex >= this.sample.sampleEnd) {
-        this.isPlaying = false
+
+      if (this.sample.loop !== null) {
+        if (this.sampleIndex >= this.sample.loop.end && this.isLooping) {
+          this.sampleIndex = this.sample.loop.start
+        } else if (this.sampleIndex >= this.sample.sampleEnd) {
+          this.isPlaying = false
+        }
       }
     }
   }
@@ -228,9 +234,7 @@ class SynthProcessor extends AudioWorkletProcessor {
             buffer: data,
             sampleStart: 0,
             sampleEnd: data.length,
-            isOneShot: true,
-            loopStart: data.length * 0.1,
-            loopEnd: data.length * 0.999,
+            loop: null,
           }
           if (this.samples[instrument] === undefined) {
             this.samples[instrument] = {}
