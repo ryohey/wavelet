@@ -1,5 +1,5 @@
 import { read } from "midifile-ts"
-import { loadAllSamples } from "./loader"
+import { loadMIDIjsInstruments } from "./MIDI.js/loader"
 import { midiMessageToSynthEvent } from "./midiMessageToSynthEvent"
 import { playMIDI } from "./playMIDI"
 import * as SynthEvent from "./SynthEvent"
@@ -25,14 +25,53 @@ const main = async () => {
     synth.port.postMessage(e, transfer ?? [])
   }
 
+  const loadMIDIjsSoundFont = async () => {
+    const url = "/midi-js-soundfonts-with-drums/FluidR3_GM/"
+    const instruments = await loadMIDIjsInstruments(
+      url,
+      context,
+      (progress) => {
+        const progressElm = document.getElementById(
+          "progress"
+        ) as HTMLProgressElement
+        progressElm.value = progress
+      }
+    )
+    instruments.forEach((instrument) => {
+      instrument.samples.forEach((sample) => {
+        postSynthMessage(
+          {
+            type: "loadSample",
+            pitch: sample.pitch,
+            instrument: instrument.instrument,
+            data: sample.buffer,
+            keyRange: [sample.pitch, sample.pitch + 1],
+          },
+          [sample.buffer] // transfer instead of copy)
+        )
+      })
+    })
+  }
+
+  const setupMIDIInput = async () => {
+    const midiAccess = await (navigator as any).requestMIDIAccess({
+      sysex: false,
+    })
+
+    midiAccess.inputs.forEach((entry: any) => {
+      entry.onmidimessage = (event: any) => {
+        const e = midiMessageToSynthEvent(event.data)
+        if (e !== null) {
+          postSynthMessage(e)
+        }
+      }
+    })
+  }
+
   await setup()
 
-  loadAllSamples(context, postSynthMessage, (progress) => {
-    const progressElm = document.getElementById(
-      "progress"
-    ) as HTMLProgressElement
-    progressElm.value = progress
-  })
+  loadMIDIjsSoundFont().catch((e) => console.error(e))
+  setupMIDIInput().catch((e) => console.error(e))
 
   document.getElementById("button-resume")?.addEventListener("click", () => {
     context.resume()
@@ -49,23 +88,6 @@ const main = async () => {
     const file = input.files?.[0]
     reader.readAsArrayBuffer(file!)
   })
-
-  try {
-    const midiAccess = await (navigator as any).requestMIDIAccess({
-      sysex: false,
-    })
-
-    midiAccess.inputs.forEach((entry: any) => {
-      entry.onmidimessage = (event: any) => {
-        const e = midiMessageToSynthEvent(event.data)
-        if (e !== null) {
-          postSynthMessage(e)
-        }
-      }
-    })
-  } catch (e) {
-    console.error(e)
-  }
 }
 
 main().catch((e) => {
