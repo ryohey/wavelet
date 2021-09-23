@@ -1,4 +1,5 @@
 import { Decoder } from "../MIDI.js/loader"
+import { parseText } from "./parseText"
 
 export interface WaveletSample {
   bank: number
@@ -11,6 +12,8 @@ export interface WaveletSample {
 interface Sample {
   file: string
   key: number
+  sampleFineTune?: number
+  presetFineTune?: number
   keyRange: [number, number]
 }
 
@@ -21,6 +24,38 @@ interface Preset {
   samples: Sample[]
 }
 
+const getPresets = (json: any): Preset[] => {
+  return Object.keys(json["Presets"]).map((presetName): Preset => {
+    const preset = json.Presets[presetName]
+    const samples = Object.keys(preset.Instruments).flatMap(
+      (instrumentName): Sample[] => {
+        const instrument = json.Instruments[instrumentName]
+        return Object.keys(instrument.Samples).map((sampleName): Sample => {
+          const sample = instrument.Samples[sampleName]
+          const sampleDef = json.Samples[sampleName]
+          return {
+            file: sampleName,
+            key: sampleDef.Key,
+            keyRange: [sample.Z_LowKey, sample.Z_HighKey],
+            sampleFineTune: sampleDef.FineTune,
+            presetFineTune: sample.Z_fineTune,
+            // ループ時間やアタックタイムなどをちゃんと見たほうがいいかも
+            // Z_decayVolEnv とか
+            // https://www.utsbox.com/?p=2390
+          }
+        })
+      }
+    )
+
+    return {
+      name: presetName,
+      bank: preset.Bank,
+      program: preset.Program,
+      samples,
+    }
+  })
+}
+
 export const loadWaveletSamples = async function* (
   url: string,
   decoder: Decoder,
@@ -28,7 +63,8 @@ export const loadWaveletSamples = async function* (
 ): AsyncGenerator<WaveletSample> {
   let progress = 0
   const baseUrl = url.substring(0, url.lastIndexOf("/"))
-  const json = (await (await fetch(url)).json()) as Preset[]
+  const text = await (await fetch(url)).text()
+  const json = getPresets(parseText(text))
   const count = json.flatMap((p) => p.samples).length
 
   for await (const preset of json) {
@@ -46,7 +82,10 @@ export const loadWaveletSamples = async function* (
         instrument: preset.program,
         buffer: buffer.getChannelData(0).buffer,
         keyRange: sample.keyRange,
-        pitch: sample.key,
+        pitch:
+          sample.key +
+          (sample.sampleFineTune ?? 0) / 100 +
+          (sample.presetFineTune ?? 0) / 100,
       }
     }
   }

@@ -93,7 +93,7 @@ const main = async () => {
   }
 
   const loadWaveletSound = async () => {
-    const url = "soundfonts/A320U/A320U-converted.json"
+    const url = "soundfonts/A320U/A320U.txt"
 
     for await (const sample of loadWaveletSamples(url, context, (progress) => {
       const progressElm = document.getElementById(
