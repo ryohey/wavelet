@@ -3,6 +3,7 @@ import { loadMIDIjsInstruments } from "./MIDI.js/loader"
 import { midiMessageToSynthEvent } from "./midiMessageToSynthEvent"
 import { playMIDI } from "./playMIDI"
 import * as SynthEvent from "./SynthEvent"
+import { loadWaveletSamples } from "./wavelet/loader"
 
 const main = async () => {
   const context = new AudioContext()
@@ -53,6 +54,29 @@ const main = async () => {
     })
   }
 
+  const loadWaveletSound = async () => {
+    const url = "soundfonts/A320U/A320U-converted.json"
+
+    const samples = await loadWaveletSamples(url, context, (progress) => {
+      const progressElm = document.getElementById(
+        "progress"
+      ) as HTMLProgressElement
+      progressElm.value = progress
+    })
+    samples.forEach((sample) => {
+      postSynthMessage(
+        {
+          type: "loadSample",
+          pitch: sample.pitch,
+          instrument: sample.instrument,
+          data: sample.buffer,
+          keyRange: [sample.pitch, sample.pitch + 1],
+        },
+        [sample.buffer] // transfer instead of copy)
+      )
+    })
+  }
+
   const setupMIDIInput = async () => {
     const midiAccess = await (navigator as any).requestMIDIAccess({
       sysex: false,
@@ -70,7 +94,8 @@ const main = async () => {
 
   await setup()
 
-  loadMIDIjsSoundFont().catch((e) => console.error(e))
+  // loadMIDIjsSoundFont().catch((e) => console.error(e))
+  loadWaveletSound().catch((e) => console.error(e))
   setupMIDIInput().catch((e) => console.error(e))
 
   document.getElementById("button-resume")?.addEventListener("click", () => {
