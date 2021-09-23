@@ -28,30 +28,28 @@ export const loadWaveletSamples = async (
   let progress = 0
   const baseUrl = url.substring(0, url.lastIndexOf("/"))
   const json = (await (await fetch(url)).json()) as Preset[]
-  let count = 0
-  const tasks = json.flatMap((preset) => {
-    return preset.samples.map(async (sample) => {
+  const count = json.flatMap((p) => p.samples).length
+  const result = []
+
+  for await (const preset of json) {
+    for await (const sample of preset.samples) {
       const wavUrl = `${baseUrl}/${encodeURIComponent(
         sample.file.replace("#", "s")
       )}.wav`
-      try {
-        const audioData = await (await fetch(wavUrl)).arrayBuffer()
-        const buffer = await decoder.decodeAudioData(audioData)
-        progress++
-        onProgress(progress / count)
-        return {
-          instrument: preset.program,
-          name: preset.name,
-          buffer: buffer.getChannelData(0).buffer,
-          keyRange: sample.keyRange,
-          pitch: sample.key,
-        }
-      } catch (e: any) {
-        console.log(wavUrl)
-        throw e
-      }
-    })
-  })
-  count = tasks.length
-  return await Promise.all(tasks)
+      const audioData = await (await fetch(wavUrl)).arrayBuffer()
+      const buffer = await decoder.decodeAudioData(audioData)
+      progress++
+      onProgress(progress / count)
+
+      result.push({
+        instrument: preset.program,
+        name: preset.name,
+        buffer: buffer.getChannelData(0).buffer,
+        keyRange: sample.keyRange,
+        pitch: sample.key,
+      })
+    }
+  }
+
+  return result
 }
