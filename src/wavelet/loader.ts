@@ -57,6 +57,13 @@ const getPresets = (json: any): Preset[] => {
   })
 }
 
+const convertUint16ToInt16 = (num: number) => {
+  const arr = new Int16Array(1)
+  const view = new DataView(arr.buffer)
+  view.setUint16(0, num)
+  return view.getInt16(0)
+}
+
 export const loadWaveletSamples = async function* (
   url: string,
   decoder: Decoder,
@@ -85,8 +92,8 @@ export const loadWaveletSamples = async function* (
         keyRange: sample.keyRange,
         pitch:
           sample.key +
-          (sample.sampleFineTune ?? 0) / 100 +
-          (sample.presetFineTune ?? 0) / 100,
+          convertUint16ToInt16(sample.sampleFineTune ?? 0) / 100 +
+          convertUint16ToInt16(sample.presetFineTune ?? 0) / 100,
         name: sample.file,
       }
     }
