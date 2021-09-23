@@ -7,6 +7,7 @@ export interface WaveletSample {
   buffer: ArrayBuffer
   keyRange: [number, number]
   pitch: number
+  name: string
 }
 
 interface Sample {
@@ -86,6 +87,7 @@ export const loadWaveletSamples = async function* (
           sample.key +
           (sample.sampleFineTune ?? 0) / 100 +
           (sample.presetFineTune ?? 0) / 100,
+        name: sample.file,
       }
     }
   }

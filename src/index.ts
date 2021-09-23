@@ -96,6 +96,7 @@ const main = async () => {
             instrument: instrument.instrument,
             data: sample.buffer,
             keyRange: [sample.pitch, sample.pitch + 1],
+            name: "",
           },
           [sample.buffer] // transfer instead of copy)
         )
@@ -123,6 +124,7 @@ const main = async () => {
           instrument: sample.instrument,
           data: sample.buffer,
           keyRange: sample.keyRange,
+          name: sample.name,
         },
         [sample.buffer] // transfer instead of copy)
       )
@@ -158,7 +160,7 @@ const main = async () => {
   const drawMidiMessage = (e: SynthEvent.SynthEvent) => {
     switch (e.type) {
       case "noteOn":
-        noteCanvas.matrix[e.channel][e.pitch] = 127
+        noteCanvas.matrix[e.channel][e.pitch] = 50
         break
       case "noteOff":
         // noteCanvas.matrix[e.channel][e.pitch] = 0

@@ -6,6 +6,7 @@ interface SampleLoop {
 }
 
 interface Sample {
+  name: string
   buffer: Float32Array
   pitch: number
   loop: SampleLoop | null
@@ -245,9 +246,10 @@ class SynthProcessor extends AudioWorkletProcessor {
       logger.log(e.data)
       switch (e.data.type) {
         case "loadSample":
-          const { instrument, pitch, keyRange } = e.data
+          const { instrument, pitch, keyRange, name } = e.data
           const data = new Float32Array(e.data.data)
           const sample: Sample = {
+            name: name,
             buffer: data,
             pitch,
             sampleStart: 0,

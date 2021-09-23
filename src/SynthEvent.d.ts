@@ -4,6 +4,7 @@ export interface LoadSampleEvent {
   pitch: number
   instrument: number // GM Patch Number
   keyRange: [number, number]
+  name: string // debug purpose
 }
 
 interface DelayTime {
