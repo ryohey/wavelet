@@ -8,13 +8,18 @@ import { loadWaveletSamples } from "./wavelet/loader"
 class MatrixCanvas {
   private canvas: HTMLCanvasElement
   private ctx: CanvasRenderingContext2D
+  private valueToColor: (value: number) => string
 
   readonly matrix = Array.from({ length: 128 }, () =>
     Array.from({ length: 128 }, () => 0)
   )
 
-  constructor(canvas: HTMLCanvasElement) {
+  constructor(
+    canvas: HTMLCanvasElement,
+    valueToColor: (value: number) => string
+  ) {
     this.canvas = canvas
+    this.valueToColor = valueToColor
     const ctx = canvas.getContext("2d")
     if (ctx === null) {
       throw new Error("Failed to getContext")
@@ -32,15 +37,21 @@ class MatrixCanvas {
     ctx.clearRect(0, 0, width, height)
     matrix.forEach((row, y) => {
       row.forEach((value, x) => {
-        ctx.fillStyle = `rgba(0, 255, 0, ${value / 3})`
+        ctx.fillStyle = this.valueToColor(value)
         ctx.fillRect(x * cellWidth, y * cellHeight, cellWidth, cellHeight)
       })
     })
   }
 }
 
-const matrixCanvas = new MatrixCanvas(
-  document.getElementById("canvas") as HTMLCanvasElement
+const loadStateCanvas = new MatrixCanvas(
+  document.getElementById("load-canvas") as HTMLCanvasElement,
+  (value) => `rgba(0, 255, 0, ${value / 3})`
+)
+
+const noteCanvas = new MatrixCanvas(
+  document.getElementById("note-canvas") as HTMLCanvasElement,
+  (value) => `rgba(0, 0, 255, ${value / 127})`
 )
 
 const main = async () => {
@@ -121,10 +132,10 @@ const main = async () => {
         pitch <= sample.keyRange[1];
         pitch++
       ) {
-        matrixCanvas.matrix[sample.instrument][pitch]++
+        loadStateCanvas.matrix[sample.instrument][pitch]++
       }
 
-      matrixCanvas.draw()
+      loadStateCanvas.draw()
     }
   }
 
@@ -138,9 +149,22 @@ const main = async () => {
         const e = midiMessageToSynthEvent(event.data)
         if (e !== null) {
           postSynthMessage(e)
+          drawMidiMessage(e)
         }
       }
     })
+  }
+
+  const drawMidiMessage = (e: SynthEvent.SynthEvent) => {
+    switch (e.type) {
+      case "noteOn":
+        noteCanvas.matrix[e.channel][e.pitch] = 127
+        break
+      case "noteOff":
+        // noteCanvas.matrix[e.channel][e.pitch] = 0
+        break
+    }
+    noteCanvas.draw()
   }
 
   await setup()
@@ -158,7 +182,10 @@ const main = async () => {
     const reader = new FileReader()
     reader.onload = () => {
       const midi = read(reader.result as ArrayBuffer)
-      playMIDI(midi, context.sampleRate, postSynthMessage)
+      playMIDI(midi, context.sampleRate, (e: SynthEvent.SynthEvent) => {
+        postSynthMessage(e)
+        drawMidiMessage(e)
+      })
     }
     const input = e.currentTarget as HTMLInputElement
     const file = input.files?.[0]

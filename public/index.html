@@ -8,7 +8,18 @@
     <input id="open" type="file" accept=".mid,.midi" />
     <progress id="progress"></progress>
     <div>
-      <canvas id="canvas" width="640" height="640"></canvas>
+      <canvas
+        id="load-canvas"
+        width="640"
+        height="640"
+        style="position: absolute"
+      ></canvas>
+      <canvas
+        id="note-canvas"
+        width="640"
+        height="640"
+        style="position: absolute"
+      ></canvas>
     </div>
     <script src="js/index.js"></script>
   </body>
