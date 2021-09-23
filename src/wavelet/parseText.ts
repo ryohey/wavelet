@@ -177,10 +177,7 @@ const treeToDict = (node: TextNode): any => {
 
     return {
       [sp[1]]: {
-        Samples: children
-          .filter((c) => Object.keys(c).includes("Sample"))
-          .map(({ Sample, ...rest }) => ({ [Sample]: rest }))
-          .reduce((p, c) => ({ ...p, ...c }), {}),
+        Samples: children.filter((c) => Object.keys(c).includes("Sample")),
         GlobalZone: equalSeparatedToDict(
           children.find((c) => c.value === "GlobalZone")?.children ?? []
         ),

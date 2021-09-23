@@ -30,8 +30,8 @@ const getPresets = (json: any): Preset[] => {
     const samples = Object.keys(preset.Instruments).flatMap(
       (instrumentName): Sample[] => {
         const instrument = json.Instruments[instrumentName]
-        return Object.keys(instrument.Samples).map((sampleName): Sample => {
-          const sample = instrument.Samples[sampleName]
+        return instrument.Samples.map((sample: any): Sample => {
+          const sampleName = sample.Sample
           const sampleDef = json.Samples[sampleName]
           return {
             file: sampleName,
