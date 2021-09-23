@@ -5,6 +5,44 @@ import { playMIDI } from "./playMIDI"
 import * as SynthEvent from "./SynthEvent"
 import { loadWaveletSamples } from "./wavelet/loader"
 
+class MatrixCanvas {
+  private canvas: HTMLCanvasElement
+  private ctx: CanvasRenderingContext2D
+
+  readonly matrix = Array.from({ length: 128 }, () =>
+    Array.from({ length: 128 }, () => 0)
+  )
+
+  constructor(canvas: HTMLCanvasElement) {
+    this.canvas = canvas
+    const ctx = canvas.getContext("2d")
+    if (ctx === null) {
+      throw new Error("Failed to getContext")
+    }
+    this.ctx = ctx
+  }
+
+  draw() {
+    const { canvas, ctx, matrix } = this
+    const scale = window.devicePixelRatio
+    const width = canvas.width * scale
+    const height = canvas.height * scale
+    const cellWidth = width / matrix[0].length
+    const cellHeight = (height * scale) / matrix.length
+    ctx.clearRect(0, 0, width, height)
+    matrix.forEach((row, y) => {
+      row.forEach((value, x) => {
+        ctx.fillStyle = `rgba(0, 255, 0, ${value / 3})`
+        ctx.fillRect(x * cellWidth, y * cellHeight, cellWidth, cellHeight)
+      })
+    })
+  }
+}
+
+const matrixCanvas = new MatrixCanvas(
+  document.getElementById("canvas") as HTMLCanvasElement
+)
+
 const main = async () => {
   const context = new AudioContext()
   let synth: AudioWorkletNode
@@ -57,24 +95,37 @@ const main = async () => {
   const loadWaveletSound = async () => {
     const url = "soundfonts/A320U/A320U-converted.json"
 
-    const samples = await loadWaveletSamples(url, context, (progress) => {
+    for await (const sample of loadWaveletSamples(url, context, (progress) => {
       const progressElm = document.getElementById(
         "progress"
       ) as HTMLProgressElement
       progressElm.value = progress
-    })
-    samples.forEach((sample) => {
+    })) {
+      if (sample.bank !== 0) {
+        console.log("ignore", sample)
+        continue
+      }
       postSynthMessage(
         {
           type: "loadSample",
           pitch: sample.pitch,
           instrument: sample.instrument,
           data: sample.buffer,
-          keyRange: [sample.pitch, sample.pitch + 1],
+          keyRange: sample.keyRange,
         },
         [sample.buffer] // transfer instead of copy)
       )
-    })
+
+      for (
+        let pitch = sample.keyRange[0];
+        pitch <= sample.keyRange[1];
+        pitch++
+      ) {
+        matrixCanvas.matrix[sample.instrument][pitch]++
+      }
+
+      matrixCanvas.draw()
+    }
   }
 
   const setupMIDIInput = async () => {

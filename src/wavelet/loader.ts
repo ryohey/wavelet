@@ -1,6 +1,7 @@
 import { Decoder } from "../MIDI.js/loader"
 
 export interface WaveletSample {
+  bank: number
   instrument: number
   buffer: ArrayBuffer
   keyRange: [number, number]
@@ -20,16 +21,15 @@ interface Preset {
   samples: Sample[]
 }
 
-export const loadWaveletSamples = async (
+export const loadWaveletSamples = async function* (
   url: string,
   decoder: Decoder,
   onProgress: (progress: number) => void
-): Promise<WaveletSample[]> => {
+): AsyncGenerator<WaveletSample> {
   let progress = 0
   const baseUrl = url.substring(0, url.lastIndexOf("/"))
   const json = (await (await fetch(url)).json()) as Preset[]
   const count = json.flatMap((p) => p.samples).length
-  const result = []
 
   for await (const preset of json) {
     for await (const sample of preset.samples) {
@@ -41,15 +41,13 @@ export const loadWaveletSamples = async (
       progress++
       onProgress(progress / count)
 
-      result.push({
+      yield {
+        bank: preset.bank,
         instrument: preset.program,
-        name: preset.name,
         buffer: buffer.getChannelData(0).buffer,
         keyRange: sample.keyRange,
         pitch: sample.key,
-      })
+      }
     }
   }
-
-  return result
 }
