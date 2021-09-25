@@ -11,9 +11,22 @@ export type WaveletSample = SampleData<ArrayBuffer> & {
 interface Sample {
   file: string
   key: number
+  sampleRate: number
   sampleFineTune: number
   presetFineTune: number
   keyRange: [number, number]
+  startAddrsOffset: number // second
+  endAddrsOffset: number // second
+  startLoopAddrsOffset: number // second
+  endLoopAddrsOffset: number // second
+
+  /*
+  0 indicates a sound reproduced with no loop,
+  1 indicates a sound which loops continuously,
+  2 is unused but should be interpreted as indicating no loop, and
+  3 indicates a sound which loops for the duration of key depression then proceeds to play the remainder of the sample.
+  */
+  sampleModes: number
 }
 
 interface Preset {
@@ -31,14 +44,34 @@ const getPresets = (json: any): Preset[] => {
         (instrumentName): Sample[] => {
           const instrument = json.Instruments[instrumentName]
           return instrument.Samples.map((sample: any): Sample => {
+            // https://pjb.com.au/midi/sfspec21.html#g4
             const sampleName = sample.Sample
             const sampleDef = json.Samples[sampleName]
+            const sampleRate = sampleDef.SampleRate
+            const startAddrsOffset =
+              (sample.Z_startAddrsOffset ?? 0) +
+              (sample.Z_startAddrsCoarseOffset ?? 0) * 32768
+            const endAddrsOffset =
+              (sample.Z_endAddrsOffset ?? 0) +
+              (sample.Z_endAddrsCoarseOffset ?? 0) * 32768
+            const startLoopAddrsOffset =
+              (sample.Z_startLoopAddrsOffset ?? 0) +
+              (sample.Z_startLoopAddrsCoarseOffset ?? 0) * 32768
+            const endLoopAddrsOffset =
+              (sample.Z_endLoopAddrsOffset ?? 0) +
+              (sample.Z_endLoopAddrsCoarseOffset ?? 0) * 32768
             return {
               file: sampleName,
+              sampleRate,
               key: sample.Z_overridingRootKey ?? sampleDef.Key,
               keyRange: [sample.Z_LowKey, sample.Z_HighKey],
               sampleFineTune: sampleDef.FineTune ?? 0,
               presetFineTune: sample.Z_fineTune ?? 0,
+              startAddrsOffset: startAddrsOffset,
+              endAddrsOffset: endAddrsOffset,
+              startLoopAddrsOffset: startLoopAddrsOffset,
+              endLoopAddrsOffset: endLoopAddrsOffset,
+              sampleModes: sample.Z_sampleModes ?? 0,
               // ループ時間やアタックタイムなどをちゃんと見たほうがいいかも
               // Z_decayVolEnv とか
               // https://www.utsbox.com/?p=2390
@@ -54,6 +87,7 @@ const getPresets = (json: any): Preset[] => {
         samples,
       }
     })
+    .filter((e) => e.bank === 0 && e.program === 2)
 }
 
 const convertUint16ToInt16 = (num: number) => {
@@ -94,9 +128,23 @@ export const loadWaveletSamples = async function* (
           convertUint16ToInt16(sample.sampleFineTune) / 100 -
           convertUint16ToInt16(sample.presetFineTune) / 100,
         name: sample.file,
-        sampleStart: 0,
-        sampleEnd: buffer.length,
-        loop: null,
+        sampleStart:
+          (sample.startAddrsOffset * sample.sampleRate) / buffer.sampleRate,
+        sampleEnd:
+          sample.endAddrsOffset === 0
+            ? buffer.length
+            : (sample.endAddrsOffset * sample.sampleRate) / buffer.sampleRate,
+        loop:
+          sample.sampleModes === 1 && sample.endLoopAddrsOffset > 0
+            ? {
+                start:
+                  (sample.startLoopAddrsOffset * sample.sampleRate) /
+                  buffer.sampleRate,
+                end:
+                  (sample.endLoopAddrsOffset * sample.sampleRate) /
+                  buffer.sampleRate,
+              }
+            : null,
       }
     }
   }
