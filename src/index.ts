@@ -193,6 +193,35 @@ const main = async () => {
     const file = input.files?.[0]
     reader.readAsArrayBuffer(file!)
   })
+
+  document.getElementById("button-test")?.addEventListener("click", () => {
+    context.resume()
+
+    postSynthMessage({
+      type: "programChange",
+      value: 2,
+      channel: 0,
+      delayTime: 0,
+    })
+
+    const step = context.sampleRate * 0.1
+    let time = 0
+    for (let pitch = 0; pitch < 128; pitch++) {
+      postSynthMessage({
+        type: "noteOn",
+        pitch,
+        velocity: 128,
+        channel: 0,
+        delayTime: time++ * step,
+      })
+      postSynthMessage({
+        type: "noteOff",
+        pitch,
+        channel: 0,
+        delayTime: time++ * step,
+      })
+    }
+  })
 }
 
 main().catch((e) => {
