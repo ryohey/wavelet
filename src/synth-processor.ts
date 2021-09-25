@@ -1,18 +1,6 @@
-import { DelayableEvent, SynthEvent } from "./SynthEvent"
+import { DelayableEvent, SampleData, SynthEvent } from "./SynthEvent"
 
-interface SampleLoop {
-  start: number
-  end: number
-}
-
-interface Sample {
-  name: string
-  buffer: Float32Array
-  pitch: number
-  loop: SampleLoop | null
-  sampleStart: number
-  sampleEnd: number
-}
+type Sample = SampleData<Float32Array>
 
 class WavetableOscillator {
   private sample: Sample
@@ -222,6 +210,7 @@ class Logger {
 }
 
 const logger = new Logger()
+logger.enabled = true
 
 interface ChannelState {
   speed: number
@@ -246,15 +235,10 @@ class SynthProcessor extends AudioWorkletProcessor {
       logger.log(e.data)
       switch (e.data.type) {
         case "loadSample":
-          const { instrument, pitch, keyRange, name } = e.data
-          const data = new Float32Array(e.data.data)
+          const { instrument, keyRange, sample: _sample } = e.data
           const sample: Sample = {
-            name: name,
-            buffer: data,
-            pitch,
-            sampleStart: 0,
-            sampleEnd: data.length,
-            loop: null,
+            ..._sample,
+            buffer: new Float32Array(_sample.buffer),
           }
 
           for (let i = keyRange[0]; i <= keyRange[1]; i++) {

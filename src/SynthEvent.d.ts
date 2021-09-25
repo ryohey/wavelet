@@ -1,10 +1,22 @@
+export interface SampleLoop {
+  start: number
+  end: number
+}
+
+export interface SampleData<BufferType> {
+  name: string
+  buffer: BufferType
+  pitch: number
+  loop: SampleLoop | null
+  sampleStart: number
+  sampleEnd: number
+}
+
 export interface LoadSampleEvent {
   type: "loadSample"
-  data: ArrayBuffer
-  pitch: number
+  sample: SampleData<ArrayBuffer>
   instrument: number // GM Patch Number
   keyRange: [number, number]
-  name: string // debug purpose
 }
 
 interface DelayTime {

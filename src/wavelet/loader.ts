@@ -1,13 +1,11 @@
 import { Decoder } from "../MIDI.js/loader"
+import { SampleData } from "../SynthEvent"
 import { parseText } from "./parseText"
 
-export interface WaveletSample {
+export type WaveletSample = SampleData<ArrayBuffer> & {
   bank: number
   instrument: number
-  buffer: ArrayBuffer
   keyRange: [number, number]
-  pitch: number
-  name: string
 }
 
 interface Sample {
@@ -26,35 +24,36 @@ interface Preset {
 }
 
 const getPresets = (json: any): Preset[] => {
-  return Object.keys(json["Presets"]).map((presetName): Preset => {
-    const preset = json.Presets[presetName]
-    const samples = Object.keys(preset.Instruments).flatMap(
-      (instrumentName): Sample[] => {
-        const instrument = json.Instruments[instrumentName]
-        return instrument.Samples.map((sample: any): Sample => {
-          const sampleName = sample.Sample
-          const sampleDef = json.Samples[sampleName]
-          return {
-            file: sampleName,
-            key: sample.Z_overridingRootKey ?? sampleDef.Key,
-            keyRange: [sample.Z_LowKey, sample.Z_HighKey],
-            sampleFineTune: sampleDef.FineTune ?? 0,
-            presetFineTune: sample.Z_fineTune ?? 0,
-            // ループ時間やアタックタイムなどをちゃんと見たほうがいいかも
-            // Z_decayVolEnv とか
-            // https://www.utsbox.com/?p=2390
-          }
-        })
-      }
-    )
+  return Object.keys(json["Presets"])
+    .map((presetName): Preset => {
+      const preset = json.Presets[presetName]
+      const samples = Object.keys(preset.Instruments).flatMap(
+        (instrumentName): Sample[] => {
+          const instrument = json.Instruments[instrumentName]
+          return instrument.Samples.map((sample: any): Sample => {
+            const sampleName = sample.Sample
+            const sampleDef = json.Samples[sampleName]
+            return {
+              file: sampleName,
+              key: sample.Z_overridingRootKey ?? sampleDef.Key,
+              keyRange: [sample.Z_LowKey, sample.Z_HighKey],
+              sampleFineTune: sampleDef.FineTune ?? 0,
+              presetFineTune: sample.Z_fineTune ?? 0,
+              // ループ時間やアタックタイムなどをちゃんと見たほうがいいかも
+              // Z_decayVolEnv とか
+              // https://www.utsbox.com/?p=2390
+            }
+          })
+        }
+      )
 
-    return {
-      name: presetName,
-      bank: preset.Bank,
-      program: preset.Program,
-      samples,
-    }
-  })
+      return {
+        name: presetName,
+        bank: preset.Bank,
+        program: preset.Program,
+        samples,
+      }
+    })
 }
 
 const convertUint16ToInt16 = (num: number) => {
@@ -95,6 +94,9 @@ export const loadWaveletSamples = async function* (
           convertUint16ToInt16(sample.sampleFineTune) / 100 -
           convertUint16ToInt16(sample.presetFineTune) / 100,
         name: sample.file,
+        sampleStart: 0,
+        sampleEnd: buffer.length,
+        loop: null,
       }
     }
   }

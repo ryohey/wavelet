@@ -120,11 +120,9 @@ const main = async () => {
       postSynthMessage(
         {
           type: "loadSample",
-          pitch: sample.pitch,
+          sample,
           instrument: sample.instrument,
-          data: sample.buffer,
           keyRange: sample.keyRange,
-          name: sample.name,
         },
         [sample.buffer] // transfer instead of copy)
       )
