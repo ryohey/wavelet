@@ -128,21 +128,14 @@ export const loadWaveletSamples = async function* (
           convertUint16ToInt16(sample.sampleFineTune) / 100 -
           convertUint16ToInt16(sample.presetFineTune) / 100,
         name: sample.file,
-        sampleStart:
-          (sample.startAddrsOffset * sample.sampleRate) / buffer.sampleRate,
+        sampleStart: sample.startAddrsOffset,
         sampleEnd:
-          sample.endAddrsOffset === 0
-            ? buffer.length
-            : (sample.endAddrsOffset * sample.sampleRate) / buffer.sampleRate,
+          sample.endAddrsOffset === 0 ? buffer.length : sample.endAddrsOffset,
         loop:
           sample.sampleModes === 1 && sample.endLoopAddrsOffset > 0
             ? {
-                start:
-                  (sample.startLoopAddrsOffset * sample.sampleRate) /
-                  buffer.sampleRate,
-                end:
-                  (sample.endLoopAddrsOffset * sample.sampleRate) /
-                  buffer.sampleRate,
+                start: sample.startLoopAddrsOffset,
+                end: sample.endLoopAddrsOffset,
               }
             : null,
         sampleRate: buffer.sampleRate,
