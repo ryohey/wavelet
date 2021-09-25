@@ -272,7 +272,7 @@ class SynthProcessor extends AudioWorkletProcessor {
     }
   }
 
-  getOscillator(channel: number, pitch: number): NoteOscillator | null {
+  getSample(channel: number, pitch: number): Sample | null {
     const state = this.getChannel(channel)
 
     // Play drums for CH.10
@@ -286,13 +286,7 @@ class SynthProcessor extends AudioWorkletProcessor {
     if (sample === undefined) {
       return null
     }
-    const envelope: AmplitudeEnvelopeParameter = {
-      attackTime: 0,
-      decayTime: 0,
-      sustainLevel: 1,
-      releaseTime: 1000,
-    }
-    return new NoteOscillator(sample, envelope)
+    return sample
   }
 
   handleDelayableEvent(e: DelayableEvent) {
@@ -300,18 +294,31 @@ class SynthProcessor extends AudioWorkletProcessor {
     switch (e.type) {
       case "noteOn": {
         const { pitch, velocity, channel } = e
+        const sample = this.getSample(channel, pitch)
         const state = this.getChannel(channel)
-        const oscillator = this.getOscillator(channel, pitch)
-        if (oscillator === null) {
+
+        if (state.playingOscillators[pitch] !== undefined) {
+          break
+        }
+
+        if (sample === null) {
           logger.warn(
             `There is no sample for noteNumber ${pitch} in instrument ${state.instrument}`
           )
-        } else if (!oscillator.isPlaying) {
-          const state = this.getChannel(channel)
-          state.playingOscillators[pitch] = oscillator
-          const volume = velocity / 0x80
-          oscillator.noteOn(pitch, volume)
+          break
         }
+
+        const envelope: AmplitudeEnvelopeParameter = {
+          attackTime: 0,
+          decayTime: 0,
+          sustainLevel: 1,
+          releaseTime: 1000,
+        }
+        const oscillator = new NoteOscillator(sample, envelope)
+        state.playingOscillators[pitch] = oscillator
+        const volume = velocity / 0x80
+        oscillator.noteOn(pitch, volume)
+
         break
       }
       case "noteOff": {
