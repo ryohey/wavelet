@@ -145,6 +145,7 @@ export const loadWaveletSamples = async function* (
                   buffer.sampleRate,
               }
             : null,
+        sampleRate: buffer.sampleRate,
       }
     }
   }

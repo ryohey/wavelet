@@ -31,7 +31,8 @@ class WavetableOscillator {
       return
     }
 
-    const speed = this.baseSpeed * this.speed
+    const speed =
+      (this.baseSpeed * this.speed * this.sample.sampleRate) / sampleRate
 
     for (let i = 0; i < output.length; ++i) {
       if (this._isPlaying) {

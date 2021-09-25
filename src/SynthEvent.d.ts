@@ -10,6 +10,7 @@ export interface SampleData<BufferType> {
   loop: SampleLoop | null
   sampleStart: number
   sampleEnd: number
+  sampleRate: number
 }
 
 export interface LoadSampleEvent {

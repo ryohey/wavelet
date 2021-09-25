@@ -139,6 +139,7 @@ export const loadSoundFontSamples = async function* (
         instrument: presetHeader.preset,
         bank: presetHeader.bank,
         keyRange: [gen.keyRange.lo, gen.keyRange.hi],
+        sampleRate: sampleHeader.sampleRate,
       }
     }
   }

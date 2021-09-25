@@ -100,6 +100,7 @@ const main = async () => {
               loop: null,
               sampleStart: 0,
               sampleEnd: sample.buffer.byteLength,
+              sampleRate: context.sampleRate,
             },
             instrument: instrument.instrument,
             keyRange: [sample.pitch, sample.pitch + 1],
@@ -133,15 +134,17 @@ const main = async () => {
         [sample.buffer] // transfer instead of copy)
       )
 
-      for (
-        let pitch = sample.keyRange[0];
-        pitch <= sample.keyRange[1];
-        pitch++
-      ) {
-        loadStateCanvas.matrix[sample.instrument][pitch]++
-      }
+      if (false) {
+        for (
+          let pitch = sample.keyRange[0];
+          pitch <= sample.keyRange[1];
+          pitch++
+        ) {
+          loadStateCanvas.matrix[sample.instrument][pitch]++
+        }
 
-      loadStateCanvas.draw()
+        loadStateCanvas.draw()
+      }
     }
   }
 
@@ -171,15 +174,17 @@ const main = async () => {
         [sample.buffer] // transfer instead of copy)
       )
 
-      for (
-        let pitch = sample.keyRange[0];
-        pitch <= sample.keyRange[1];
-        pitch++
-      ) {
-        loadStateCanvas.matrix[sample.instrument][pitch]++
-      }
+      if (false) {
+        for (
+          let pitch = sample.keyRange[0];
+          pitch <= sample.keyRange[1];
+          pitch++
+        ) {
+          loadStateCanvas.matrix[sample.instrument][pitch]++
+        }
 
-      loadStateCanvas.draw()
+        loadStateCanvas.draw()
+      }
     }
   }
 
@@ -229,7 +234,7 @@ const main = async () => {
       const midi = read(reader.result as ArrayBuffer)
       playMIDI(midi, context.sampleRate, (e: SynthEvent.SynthEvent) => {
         postSynthMessage(e)
-        drawMidiMessage(e)
+        // drawMidiMessage(e)
       })
     }
     const input = e.currentTarget as HTMLInputElement
