@@ -43,10 +43,6 @@ export const loadSoundFontSamples = async function* (
       globalInstrumentZone = instrumentZones[0]
     }
 
-    if (presetHeader.bank !== 0 || presetHeader.preset !== 2) {
-      continue
-    }
-
     for await (const zone of instrumentZones.filter(
       (zone) => zone.sampleID !== undefined
     )) {
