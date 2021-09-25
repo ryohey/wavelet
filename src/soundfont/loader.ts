@@ -133,7 +133,7 @@ export const loadSoundFontSamples = async function* (
             ? audioData.length
             : (note.end * sampleHeader.sampleRate) / ctx.sampleRate,
         loop:
-          note.sampleModes === 1 && note.end > 0
+          note.sampleModes === 1 && note.loopEnd > 0
             ? {
                 start:
                   (note.loopStart * sampleHeader.sampleRate) / ctx.sampleRate,
