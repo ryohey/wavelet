@@ -247,22 +247,23 @@ const main = async () => {
       delayTime: 0,
     })
 
-    const step = context.sampleRate * 0.1
+    const step = context.sampleRate * 0.5
     let time = 0
-    for (let pitch = 0; pitch < 128; pitch++) {
+    for (let pitch = 12 * 3; pitch < 128; pitch++) {
       postSynthMessage({
         type: "noteOn",
         pitch,
         velocity: 128,
         channel: 0,
-        delayTime: time++ * step,
+        delayTime: time * step,
       })
       postSynthMessage({
         type: "noteOff",
         pitch,
         channel: 0,
-        delayTime: time++ * step,
+        delayTime: (time + 1) * step,
       })
+      time++
     }
   })
 }
