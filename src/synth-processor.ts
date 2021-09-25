@@ -373,6 +373,12 @@ class SynthProcessor extends AudioWorkletProcessor {
       })
     })
 
+    // master volume
+    const masterVolume = 0.5
+    for (let i = 0; i < output.length; ++i) {
+      output[i] *= masterVolume
+    }
+
     return true
   }
 }
