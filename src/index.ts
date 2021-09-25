@@ -2,6 +2,7 @@ import { read } from "midifile-ts"
 import { loadMIDIjsInstruments } from "./MIDI.js/loader"
 import { midiMessageToSynthEvent } from "./midiMessageToSynthEvent"
 import { playMIDI } from "./playMIDI"
+import { loadSoundFontSamples } from "./soundfont/loader"
 import * as SynthEvent from "./SynthEvent"
 import { loadWaveletSamples } from "./wavelet/loader"
 
@@ -92,11 +93,16 @@ const main = async () => {
         postSynthMessage(
           {
             type: "loadSample",
-            pitch: sample.pitch,
+            sample: {
+              name: "",
+              pitch: sample.pitch,
+              buffer: sample.buffer,
+              loop: null,
+              sampleStart: 0,
+              sampleEnd: sample.buffer.byteLength,
+            },
             instrument: instrument.instrument,
-            data: sample.buffer,
             keyRange: [sample.pitch, sample.pitch + 1],
-            name: "",
           },
           [sample.buffer] // transfer instead of copy)
         )
@@ -113,6 +119,44 @@ const main = async () => {
       ) as HTMLProgressElement
       progressElm.value = progress
     })) {
+      if (sample.bank !== 0) {
+        console.log("ignore", sample)
+        continue
+      }
+      postSynthMessage(
+        {
+          type: "loadSample",
+          sample,
+          instrument: sample.instrument,
+          keyRange: sample.keyRange,
+        },
+        [sample.buffer] // transfer instead of copy)
+      )
+
+      for (
+        let pitch = sample.keyRange[0];
+        pitch <= sample.keyRange[1];
+        pitch++
+      ) {
+        loadStateCanvas.matrix[sample.instrument][pitch]++
+      }
+
+      loadStateCanvas.draw()
+    }
+  }
+
+  const loadSoundFont = async () => {
+    const url = "soundfonts/A320U.sf2"
+    for await (const sample of loadSoundFontSamples(
+      url,
+      context,
+      (progress) => {
+        const progressElm = document.getElementById(
+          "progress"
+        ) as HTMLProgressElement
+        progressElm.value = progress
+      }
+    )) {
       if (sample.bank !== 0) {
         console.log("ignore", sample)
         continue
@@ -170,7 +214,8 @@ const main = async () => {
   await setup()
 
   // loadMIDIjsSoundFont().catch((e) => console.error(e))
-  loadWaveletSound().catch((e) => console.error(e))
+  // loadWaveletSound().catch((e) => console.error(e))
+  loadSoundFont().catch((e) => console.error(e))
   setupMIDIInput().catch((e) => console.error(e))
 
   document.getElementById("button-resume")?.addEventListener("click", () => {
