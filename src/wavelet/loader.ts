@@ -13,8 +13,8 @@ export interface WaveletSample {
 interface Sample {
   file: string
   key: number
-  sampleFineTune?: number
-  presetFineTune?: number
+  sampleFineTune: number
+  presetFineTune: number
   keyRange: [number, number]
 }
 
@@ -36,10 +36,10 @@ const getPresets = (json: any): Preset[] => {
           const sampleDef = json.Samples[sampleName]
           return {
             file: sampleName,
-            key: sampleDef.Key,
+            key: sample.Z_overridingRootKey ?? sampleDef.Key,
             keyRange: [sample.Z_LowKey, sample.Z_HighKey],
-            sampleFineTune: sampleDef.FineTune,
-            presetFineTune: sample.Z_fineTune,
+            sampleFineTune: sampleDef.FineTune ?? 0,
+            presetFineTune: sample.Z_fineTune ?? 0,
             // ループ時間やアタックタイムなどをちゃんと見たほうがいいかも
             // Z_decayVolEnv とか
             // https://www.utsbox.com/?p=2390
@@ -91,9 +91,9 @@ export const loadWaveletSamples = async function* (
         buffer: buffer.getChannelData(0).buffer,
         keyRange: sample.keyRange,
         pitch:
-          sample.key +
-          convertUint16ToInt16(sample.sampleFineTune ?? 0) / 100 +
-          convertUint16ToInt16(sample.presetFineTune ?? 0) / 100,
+          sample.key -
+          convertUint16ToInt16(sample.sampleFineTune) / 100 -
+          convertUint16ToInt16(sample.presetFineTune) / 100,
         name: sample.file,
       }
     }
