@@ -215,9 +215,10 @@ const logger = new Logger()
 logger.enabled = true
 
 interface ChannelState {
-  speed: number
   volume: number
   instrument: number
+  pitchBend: number // in semitone
+  pitchBendSensitivity: number // in semitone
   playingOscillators: { [key: number]: NoteOscillator }
 }
 
@@ -321,7 +322,7 @@ class SynthProcessor extends AudioWorkletProcessor {
       }
       case "pitchBend": {
         const state = this.getChannel(e.channel)
-        state.speed = e.value
+        state.pitchBend = (e.value / 0x2000) * state.pitchBendSensitivity
         break
       }
       case "volume": {
@@ -343,9 +344,10 @@ class SynthProcessor extends AudioWorkletProcessor {
       return state
     }
     const newState: ChannelState = {
-      speed: 1,
       volume: 1,
       instrument: 0,
+      pitchBend: 0,
+      pitchBendSensitivity: 12,
       playingOscillators: [],
     }
     this.channels[channel] = newState
@@ -366,7 +368,7 @@ class SynthProcessor extends AudioWorkletProcessor {
 
     Object.values(this.channels).forEach((state) => {
       Object.values(state.playingOscillators).forEach((oscillator) => {
-        oscillator.speed = state.speed
+        oscillator.speed = Math.pow(2, state.pitchBend / 12)
         oscillator.volume = state.volume
         oscillator.process(buffer)
         addBuffer(buffer, output)

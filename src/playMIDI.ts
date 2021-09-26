@@ -47,6 +47,13 @@ export const playMIDI = (
                 delayTime,
               })
               break
+            case "pitchBend":
+              postMessage({
+                type: "pitchBend",
+                channel: e.channel,
+                value: e.value,
+                delayTime,
+              })
           }
         case "meta":
           switch (e.subtype) {
