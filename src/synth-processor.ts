@@ -212,7 +212,7 @@ class Logger {
 }
 
 const logger = new Logger()
-logger.enabled = true
+logger.enabled = false
 
 interface ChannelState {
   volume: number
