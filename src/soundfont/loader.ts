@@ -55,12 +55,12 @@ export const loadSoundFontSamples = async function* (
         ...removeUndefined(zone),
       }
 
-      const tune = (gen.coarseTune ?? 0) + (gen.fineTune ?? 0) / 100
+      const tune = gen.coarseTune + gen.fineTune / 100
       const basePitch =
         tune +
         sampleHeader.pitchCorrection / 100 -
         (gen.overridingRootKey ?? sampleHeader.originalPitch)
-      const scaleTuning = (gen.scaleTuning ?? 0) / 100
+      const scaleTuning = gen.scaleTuning / 100
 
       const note = {
         sample,
