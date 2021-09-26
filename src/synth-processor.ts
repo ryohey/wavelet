@@ -218,6 +218,7 @@ interface ChannelState {
   instrument: number
   pitchBend: number // in semitone
   pitchBendSensitivity: number // in semitone
+  expression: number // 0 to 1
   playingOscillators: { [key: number]: NoteOscillator }
 }
 
@@ -374,6 +375,10 @@ class SynthProcessor extends AudioWorkletProcessor {
         const state = this.getChannel(e.channel)
         state.volume = e.value / 0x80
       }
+      case "expression": {
+        const state = this.getChannel(e.channel)
+        state.expression = e.value / 0x80
+      }
     }
   }
 
@@ -388,6 +393,7 @@ class SynthProcessor extends AudioWorkletProcessor {
       pitchBend: 0,
       pitchBendSensitivity: 12,
       playingOscillators: [],
+      expression: 1,
     }
     this.channels[channel] = newState
     return newState
@@ -408,7 +414,7 @@ class SynthProcessor extends AudioWorkletProcessor {
     Object.values(this.channels).forEach((state) => {
       Object.values(state.playingOscillators).forEach((oscillator) => {
         oscillator.speed = Math.pow(2, state.pitchBend / 12)
-        oscillator.volume = state.volume
+        oscillator.volume = state.volume * state.expression
         oscillator.process(buffer)
         addBuffer(buffer, output)
       })

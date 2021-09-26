@@ -72,6 +72,12 @@ export type MainVolumeEvent = DelayTime &
     value: number
   }
 
+export type ExpressionEvent = DelayTime &
+  Channel & {
+    type: "expression"
+    value: number
+  }
+
 export type DelayableEvent =
   | NoteOnEvent
   | NoteOffEvent
@@ -80,6 +86,7 @@ export type DelayableEvent =
   | ProgramChangeEvent
   | PitchBendSensitivityEvent
   | MainVolumeEvent
+  | ExpressionEvent
 
 export type SynthEvent = LoadSampleEvent | DelayableEvent
 

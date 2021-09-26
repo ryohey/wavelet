@@ -88,6 +88,17 @@ export const playMIDI = (
                     delayTime,
                   })
                   break
+                case 11:
+                  postMessage({
+                    type: "expression",
+                    channel: e.channel,
+                    value: e.value,
+                    delayTime,
+                  })
+                  break
+                default:
+                  console.warn(`not supported controller event`, e)
+                  break
               }
               lastControllerEvent = e
               break
