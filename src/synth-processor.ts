@@ -35,9 +35,8 @@ class WavetableOscillator {
       (this.baseSpeed * this.speed * this.sample.sampleRate) / sampleRate
 
     for (let i = 0; i < output.length; ++i) {
-      const index = Math.floor(this.sampleIndex)
-
       if (this._isPlaying) {
+        const index = Math.floor(this.sampleIndex)
         output[i] = this.sample.buffer[index]
       } else {
         // finish sample
@@ -48,11 +47,11 @@ class WavetableOscillator {
 
       if (
         this.sample.loop !== null &&
-        index > this.sample.loop.end &&
+        this.sampleIndex > this.sample.loop.end &&
         this.isLooping
       ) {
         this.sampleIndex = this.sample.loop.start
-      } else if (index >= this.sample.sampleEnd) {
+      } else if (this.sampleIndex >= this.sample.sampleEnd) {
         this._isPlaying = false
       }
     }
@@ -212,7 +211,7 @@ class Logger {
 }
 
 const logger = new Logger()
-logger.enabled = false
+logger.enabled = true
 
 interface ChannelState {
   volume: number
