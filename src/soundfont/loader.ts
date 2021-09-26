@@ -7,6 +7,7 @@ export type SoundFontSample = SampleData<ArrayBuffer> & {
   bank: number
   instrument: number
   keyRange: [number, number]
+  velRange: [number, number]
 }
 
 export const loadSoundFontSamples = async function* (
@@ -41,6 +42,10 @@ export const loadSoundFontSamples = async function* (
     const firstInstrumentZone = instrumentZones[0]
     if (firstInstrumentZone.sampleID === undefined) {
       globalInstrumentZone = instrumentZones[0]
+    }
+
+    if (presetHeader.bank === 0 && presetHeader.preset === 5) {
+      debugger
     }
 
     for await (const zone of instrumentZones.filter(
@@ -135,6 +140,7 @@ export const loadSoundFontSamples = async function* (
         instrument: presetHeader.preset,
         bank: presetHeader.bank,
         keyRange: [gen.keyRange.lo, gen.keyRange.hi],
+        velRange: [gen.velRange.lo, gen.velRange.hi],
         sampleRate: sampleHeader.sampleRate,
       }
     }

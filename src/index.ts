@@ -104,6 +104,7 @@ const main = async () => {
             },
             instrument: instrument.instrument,
             keyRange: [sample.pitch, sample.pitch + 1],
+            velRange: [0, 127],
           },
           [sample.buffer] // transfer instead of copy)
         )
@@ -130,6 +131,7 @@ const main = async () => {
           sample,
           instrument: sample.instrument,
           keyRange: sample.keyRange,
+          velRange: [0, 127],
         },
         [sample.buffer] // transfer instead of copy)
       )
@@ -170,6 +172,7 @@ const main = async () => {
           sample,
           instrument: sample.instrument,
           keyRange: sample.keyRange,
+          velRange: sample.velRange,
         },
         [sample.buffer] // transfer instead of copy)
       )

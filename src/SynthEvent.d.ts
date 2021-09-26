@@ -18,6 +18,7 @@ export interface LoadSampleEvent {
   sample: SampleData<ArrayBuffer>
   instrument: number // GM Patch Number
   keyRange: [number, number]
+  velRange: [number, number]
 }
 
 interface DelayTime {

@@ -227,8 +227,54 @@ const RHYTHM_INSTRUMENT = 128
 
 type DelayedEvent = DelayableEvent & { receivedFrame: number }
 
+type SampleTableItem = Sample & {
+  velRange: [number, number]
+}
+
+class SampleTable {
+  private samples: {
+    [instrument: number]: { [pitch: number]: SampleTableItem[] }
+  } = {}
+
+  addSample(
+    sample: Sample,
+    instrument: number,
+    keyRange: [number, number],
+    velRange: [number, number]
+  ) {
+    for (let i = keyRange[0]; i <= keyRange[1]; i++) {
+      if (this.samples[instrument] === undefined) {
+        this.samples[instrument] = {}
+      }
+      if (this.samples[instrument][i] === undefined) {
+        this.samples[instrument][i] = []
+      }
+      this.samples[instrument][i].push({ ...sample, velRange })
+    }
+  }
+
+  getSample(
+    instrument: number,
+    pitch: number,
+    velocity: number
+  ): Sample | null {
+    if (this.samples[instrument] === undefined) {
+      return null
+    }
+    const samples = this.samples[instrument][pitch]
+    if (samples === undefined) {
+      return null
+    }
+    return (
+      samples.find(
+        (s) => velocity >= s.velRange[0] && velocity <= s.velRange[1]
+      ) ?? null
+    )
+  }
+}
+
 class SynthProcessor extends AudioWorkletProcessor {
-  private samples: { [instrument: number]: { [pitch: number]: Sample } } = {}
+  private sampleTable = new SampleTable()
   private eventBuffer: DelayedEvent[] = []
   private channels: { [key: number]: ChannelState } = {}
 
@@ -238,18 +284,12 @@ class SynthProcessor extends AudioWorkletProcessor {
       logger.log(e.data)
       switch (e.data.type) {
         case "loadSample":
-          const { instrument, keyRange, sample: _sample } = e.data
+          const { instrument, keyRange, velRange, sample: _sample } = e.data
           const sample: Sample = {
             ..._sample,
             buffer: new Float32Array(_sample.buffer),
           }
-
-          for (let i = keyRange[0]; i <= keyRange[1]; i++) {
-            if (this.samples[instrument] === undefined) {
-              this.samples[instrument] = {}
-            }
-            this.samples[instrument][i] = sample
-          }
+          this.sampleTable.addSample(sample, instrument, keyRange, velRange)
           break
       }
       if ("delayTime" in e.data) {
@@ -259,21 +299,12 @@ class SynthProcessor extends AudioWorkletProcessor {
     }
   }
 
-  getSample(channel: number, pitch: number): Sample | null {
+  getSample(channel: number, pitch: number, velocity: number): Sample | null {
     const state = this.getChannel(channel)
-
     // Play drums for CH.10
     const instrument =
       channel === RHYTHM_CHANNEL ? RHYTHM_INSTRUMENT : state.instrument
-
-    if (this.samples[instrument] === undefined) {
-      return null
-    }
-    const sample = this.samples[instrument][pitch]
-    if (sample === undefined) {
-      return null
-    }
-    return sample
+    return this.sampleTable.getSample(instrument, pitch, velocity)
   }
 
   handleDelayableEvent(e: DelayableEvent) {
@@ -281,7 +312,7 @@ class SynthProcessor extends AudioWorkletProcessor {
     switch (e.type) {
       case "noteOn": {
         const { pitch, velocity, channel } = e
-        const sample = this.getSample(channel, pitch)
+        const sample = this.getSample(channel, pitch, velocity)
         const state = this.getChannel(channel)
 
         if (state.playingOscillators[pitch] !== undefined) {
