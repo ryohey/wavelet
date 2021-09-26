@@ -21,4 +21,4 @@ export class Logger {
 }
 
 export const logger = new Logger()
-logger.enabled = true
+logger.enabled = false

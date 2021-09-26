@@ -243,10 +243,12 @@ const main = async () => {
   document.getElementById("button-test")?.addEventListener("click", () => {
     context.resume()
 
+    const channel = 9
+
     postSynthMessage({
       type: "programChange",
-      value: 2,
-      channel: 0,
+      value: 0,
+      channel,
       delayTime: 0,
     })
 
@@ -257,13 +259,13 @@ const main = async () => {
         type: "noteOn",
         pitch,
         velocity: 127,
-        channel: 0,
+        channel,
         delayTime: time * step,
       })
       postSynthMessage({
         type: "noteOff",
         pitch,
-        channel: 0,
+        channel,
         delayTime: (time + 1) * step,
       })
       time++
