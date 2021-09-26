@@ -379,6 +379,14 @@ class SynthProcessor extends AudioWorkletProcessor {
         const state = this.getChannel(e.channel)
         state.expression = e.value / 0x80
       }
+      case "allSoundsOff": {
+        const state = this.getChannel(e.channel)
+        for (const oscillator of Object.values(state.playingOscillators)) {
+          oscillator?.noteOff()
+        }
+        state.playingOscillators = []
+        break
+      }
     }
   }
 

@@ -78,6 +78,11 @@ export type ExpressionEvent = DelayTime &
     value: number
   }
 
+export type AllSoundsOffEvent = DelayTime &
+  Channel & {
+    type: "allSoundsOff"
+  }
+
 export type DelayableEvent =
   | NoteOnEvent
   | NoteOffEvent
@@ -87,6 +92,7 @@ export type DelayableEvent =
   | PitchBendSensitivityEvent
   | MainVolumeEvent
   | ExpressionEvent
+  | AllSoundsOffEvent
 
 export type SynthEvent = LoadSampleEvent | DelayableEvent
 

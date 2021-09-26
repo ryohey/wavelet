@@ -96,6 +96,13 @@ export const playMIDI = (
                     delayTime,
                   })
                   break
+                case 120:
+                  postMessage({
+                    type: "allSoundsOff",
+                    channel: e.channel,
+                    delayTime,
+                  })
+                  break
                 default:
                   console.warn(`not supported controller event`, e)
                   break
