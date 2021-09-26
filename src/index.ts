@@ -274,6 +274,27 @@ const main = async () => {
       time++
     }
   })
+
+  {
+    const programSelect = document.getElementById(
+      "program-select"
+    ) as HTMLSelectElement
+    for (let i = 0; i < 128; i++) {
+      const option = document.createElement("option")
+      option.value = i.toString()
+      option.text = i.toString()
+      programSelect.appendChild(option)
+    }
+    programSelect.addEventListener("change", (e) => {
+      const value = parseInt(programSelect.value)
+      postSynthMessage({
+        type: "programChange",
+        value,
+        channel: 0,
+        delayTime: 0,
+      })
+    })
+  }
 }
 
 main().catch((e) => {
