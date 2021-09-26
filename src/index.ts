@@ -122,15 +122,11 @@ const main = async () => {
       ) as HTMLProgressElement
       progressElm.value = progress
     })) {
-      if (sample.bank !== 0) {
-        console.log("ignore", sample)
-        continue
-      }
       postSynthMessage(
         {
           type: "loadSample",
           sample,
-          bank: 0,
+          bank: sample.bank,
           instrument: sample.instrument,
           keyRange: sample.keyRange,
           velRange: [0, 127],
@@ -164,10 +160,6 @@ const main = async () => {
         progressElm.value = progress
       }
     )) {
-      if (sample.bank !== 0) {
-        console.log("ignore", sample)
-        continue
-      }
       postSynthMessage(
         {
           type: "loadSample",
