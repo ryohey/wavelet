@@ -214,7 +214,7 @@ const logger = new Logger()
 logger.enabled = true
 
 interface ChannelState {
-  volume: number
+  volume: number // 0 to 1
   instrument: number
   pitchBend: number // in semitone
   pitchBendSensitivity: number // in semitone
@@ -369,6 +369,10 @@ class SynthProcessor extends AudioWorkletProcessor {
         const state = this.getChannel(e.channel)
         state.pitchBendSensitivity = e.value
         break
+      }
+      case "mainVolume": {
+        const state = this.getChannel(e.channel)
+        state.volume = e.value / 0x80
       }
     }
   }

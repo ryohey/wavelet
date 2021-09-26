@@ -58,6 +58,8 @@ export const playMIDI = (
               break
             case "controller": {
               switch (e.controllerType) {
+                case 101:
+                  break
                 case 100:
                   if (lastControllerEvent?.controllerType !== 101) {
                     console.warn(`invalid RPN`)
@@ -78,15 +80,30 @@ export const playMIDI = (
                   }
                   break
                 }
+                case 7:
+                  postMessage({
+                    type: "mainVolume",
+                    channel: e.channel,
+                    value: e.value,
+                    delayTime,
+                  })
+                  break
               }
               lastControllerEvent = e
               break
             }
+            default:
+              console.warn(`not supported channel event`, e)
+              break
           }
+          break
         case "meta":
           switch (e.subtype) {
             case "setTempo":
               tempo = (60 * 1000000) / e.microsecondsPerBeat
+              break
+            default:
+              console.warn(`not supported meta event`, e)
               break
           }
       }

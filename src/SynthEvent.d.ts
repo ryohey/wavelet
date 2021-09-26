@@ -66,6 +66,12 @@ export type PitchBendSensitivityEvent = DelayTime &
     value: number
   }
 
+export type MainVolumeEvent = DelayTime &
+  Channel & {
+    type: "mainVolume"
+    value: number
+  }
+
 export type DelayableEvent =
   | NoteOnEvent
   | NoteOffEvent
@@ -73,6 +79,7 @@ export type DelayableEvent =
   | VolumeEvent
   | ProgramChangeEvent
   | PitchBendSensitivityEvent
+  | MainVolumeEvent
 
 export type SynthEvent = LoadSampleEvent | DelayableEvent
 
