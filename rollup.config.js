@@ -33,7 +33,7 @@ export default [
     ],
   },
   {
-    input: "src/synth-processor.ts",
+    input: "src/processor/processor.ts",
     output,
     plugins,
   },

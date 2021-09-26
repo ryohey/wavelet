@@ -1,4 +1,4 @@
-import { DelayableEvent, SampleData, SynthEvent } from "./SynthEvent"
+import { DelayableEvent, SampleData, SynthEvent } from "../SynthEvent"
 
 type Sample = SampleData<Float32Array>
 

@@ -61,7 +61,7 @@ const main = async () => {
 
   const setup = async () => {
     try {
-      await context.audioWorklet.addModule("js/synth-processor.js")
+      await context.audioWorklet.addModule("js/processor.js")
     } catch (e) {
       console.error("Failed to add AudioWorklet module", e)
     }
