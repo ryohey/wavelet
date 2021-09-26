@@ -14,6 +14,10 @@ export interface SampleData<BufferType> {
   sampleEnd: number
   sampleRate: number
   amplitudeEnvelope: AmplitudeEnvelopeParameter
+  // This parameter represents the degree to which MIDI key number influences pitch.
+  // A value of zero indicates that MIDI key number has no effect on pitch
+  // a value of 1 represents the usual tempered semitone scale.
+  scaleTuning: number
 }
 
 export interface LoadSampleEvent {

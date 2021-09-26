@@ -101,6 +101,7 @@ const main = async () => {
               sampleStart: 0,
               sampleEnd: sample.buffer.byteLength,
               sampleRate: context.sampleRate,
+              scaleTuning: 1,
               amplitudeEnvelope: {
                 attackTime: 0,
                 decayTime: 0,

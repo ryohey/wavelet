@@ -147,6 +147,7 @@ export const loadSoundFontSamples = async function* (
         velRange: [gen.velRange.lo, gen.velRange.hi],
         sampleRate: sampleHeader.sampleRate,
         amplitudeEnvelope,
+        scaleTuning,
       }
     }
   }

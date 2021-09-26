@@ -24,7 +24,10 @@ export class WavetableOscillator {
     this._isPlaying = true
     this.isLooping = this.sample.loop !== null
     this.sampleIndex = this.sample.sampleStart
-    this.baseSpeed = Math.pow(2, (pitch - this.sample.pitch) / 12)
+    this.baseSpeed = Math.pow(
+      2,
+      ((pitch - this.sample.pitch) / 12) * this.sample.scaleTuning
+    )
   }
 
   process(output: Float32Array) {
