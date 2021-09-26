@@ -1,4 +1,4 @@
-import { MidiFile } from "midifile-ts"
+import { ControllerEvent, MidiFile } from "midifile-ts"
 import { SynthEvent } from "./SynthEvent"
 
 export const playMIDI = (
@@ -16,6 +16,7 @@ export const playMIDI = (
 
   midi.tracks.forEach((events) => {
     let time = 0
+    let lastControllerEvent: ControllerEvent | null = null
     events.forEach((e) => {
       time += e.deltaTime
       const delayTime = tickToFrameTime(time)
@@ -54,6 +55,33 @@ export const playMIDI = (
                 value: e.value,
                 delayTime,
               })
+              break
+            case "controller": {
+              switch (e.controllerType) {
+                case 100:
+                  if (lastControllerEvent?.controllerType !== 101) {
+                    console.warn(`invalid RPN`)
+                  }
+                  break
+                case 6: {
+                  switch (lastControllerEvent?.controllerType) {
+                    case 0:
+                      // pitch bend sensitivity
+                      postMessage({
+                        type: "pitchBendSensitivity",
+                        channel: e.channel,
+                        value: e.value,
+                        delayTime,
+                      })
+                      console.log(e)
+                      break
+                  }
+                  break
+                }
+              }
+              lastControllerEvent = e
+              break
+            }
           }
         case "meta":
           switch (e.subtype) {

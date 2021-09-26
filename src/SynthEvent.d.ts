@@ -59,12 +59,19 @@ export type ProgramChangeEvent = DelayTime &
     value: number
   }
 
+export type PitchBendSensitivityEvent = DelayTime &
+  Channel & {
+    type: "pitchBendSensitivity"
+    value: number
+  }
+
 export type DelayableEvent =
   | NoteOnEvent
   | NoteOffEvent
   | PitchBendEvent
   | VolumeEvent
   | ProgramChangeEvent
+  | PitchBendSensitivityEvent
 
 export type SynthEvent = LoadSampleEvent | DelayableEvent
 
