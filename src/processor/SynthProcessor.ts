@@ -7,6 +7,7 @@ import { SampleTable } from "./SampleTable"
 
 interface ChannelState {
   volume: number // 0 to 1
+  bank: number
   instrument: number
   pitchBend: number // in semitone
   pitchBendSensitivity: number // in semitone
@@ -15,7 +16,7 @@ interface ChannelState {
 }
 
 const RHYTHM_CHANNEL = 9
-const RHYTHM_INSTRUMENT = 128
+const RHYTHM_BANK = 128
 
 type DelayedEvent = DelayableEvent & { receivedFrame: number }
 type Sample = SampleData<Float32Array>
@@ -31,12 +32,24 @@ export class SynthProcessor extends AudioWorkletProcessor {
       logger.log(e.data)
       switch (e.data.type) {
         case "loadSample":
-          const { instrument, keyRange, velRange, sample: _sample } = e.data
+          const {
+            bank,
+            instrument,
+            keyRange,
+            velRange,
+            sample: _sample,
+          } = e.data
           const sample: Sample = {
             ..._sample,
             buffer: new Float32Array(_sample.buffer),
           }
-          this.sampleTable.addSample(sample, instrument, keyRange, velRange)
+          this.sampleTable.addSample(
+            sample,
+            bank,
+            instrument,
+            keyRange,
+            velRange
+          )
           break
       }
       if ("delayTime" in e.data) {
@@ -49,9 +62,8 @@ export class SynthProcessor extends AudioWorkletProcessor {
   getSample(channel: number, pitch: number, velocity: number): Sample | null {
     const state = this.getChannelState(channel)
     // Play drums for CH.10
-    const instrument =
-      channel === RHYTHM_CHANNEL ? RHYTHM_INSTRUMENT : state.instrument
-    return this.sampleTable.getSample(instrument, pitch, velocity)
+    const bank = channel === RHYTHM_CHANNEL ? RHYTHM_BANK : state.bank
+    return this.sampleTable.getSample(bank, state.instrument, pitch, velocity)
   }
 
   handleDelayableEvent(e: DelayableEvent) {
@@ -59,16 +71,17 @@ export class SynthProcessor extends AudioWorkletProcessor {
     switch (e.type) {
       case "noteOn": {
         const { pitch, velocity, channel } = e
-        const sample = this.getSample(channel, pitch, velocity)
         const state = this.getChannelState(channel)
 
         if (state.playingOscillators[pitch] !== undefined) {
           break
         }
 
+        const sample = this.getSample(channel, pitch, velocity)
+
         if (sample === null) {
           logger.warn(
-            `There is no sample for noteNumber ${pitch} in instrument ${state.instrument}`
+            `There is no sample for noteNumber ${pitch} in instrument ${state.instrument} in bank ${state.bank}`
           )
           break
         }
@@ -144,6 +157,7 @@ export class SynthProcessor extends AudioWorkletProcessor {
     }
     const newState: ChannelState = {
       volume: 1,
+      bank: 0,
       instrument: 0,
       pitchBend: 0,
       pitchBendSensitivity: 12,

@@ -8,40 +8,41 @@ export type SampleTableItem = Sample & {
 
 export class SampleTable {
   private samples: {
-    [instrument: number]: { [pitch: number]: SampleTableItem[] }
+    [bank: number]: {
+      [instrument: number]: { [pitch: number]: SampleTableItem[] }
+    }
   } = {}
 
   addSample(
     sample: Sample,
+    bank: number,
     instrument: number,
     keyRange: [number, number],
     velRange: [number, number]
   ) {
     for (let i = keyRange[0]; i <= keyRange[1]; i++) {
-      if (this.samples[instrument] === undefined) {
-        this.samples[instrument] = {}
+      if (this.samples[bank] === undefined) {
+        this.samples[bank] = {}
       }
-      if (this.samples[instrument][i] === undefined) {
-        this.samples[instrument][i] = []
+      if (this.samples[bank][instrument] === undefined) {
+        this.samples[bank][instrument] = {}
       }
-      this.samples[instrument][i].push({ ...sample, velRange })
+      if (this.samples[bank][instrument][i] === undefined) {
+        this.samples[bank][instrument][i] = []
+      }
+      this.samples[bank][instrument][i].push({ ...sample, velRange })
     }
   }
 
   getSample(
+    bank: number,
     instrument: number,
     pitch: number,
     velocity: number
   ): Sample | null {
-    if (this.samples[instrument] === undefined) {
-      return null
-    }
-    const samples = this.samples[instrument][pitch]
-    if (samples === undefined) {
-      return null
-    }
+    const samples = this.samples?.[bank]?.[instrument]?.[pitch]
     return (
-      samples.find(
+      samples?.find(
         (s) => velocity >= s.velRange[0] && velocity <= s.velRange[1]
       ) ?? null
     )

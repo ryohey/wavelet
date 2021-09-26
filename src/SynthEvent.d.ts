@@ -16,6 +16,7 @@ export interface SampleData<BufferType> {
 export interface LoadSampleEvent {
   type: "loadSample"
   sample: SampleData<ArrayBuffer>
+  bank: number
   instrument: number // GM Patch Number
   keyRange: [number, number]
   velRange: [number, number]

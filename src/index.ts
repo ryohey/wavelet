@@ -102,6 +102,7 @@ const main = async () => {
               sampleEnd: sample.buffer.byteLength,
               sampleRate: context.sampleRate,
             },
+            bank: 0,
             instrument: instrument.instrument,
             keyRange: [sample.pitch, sample.pitch + 1],
             velRange: [0, 127],
@@ -129,6 +130,7 @@ const main = async () => {
         {
           type: "loadSample",
           sample,
+          bank: 0,
           instrument: sample.instrument,
           keyRange: sample.keyRange,
           velRange: [0, 127],
@@ -170,6 +172,7 @@ const main = async () => {
         {
           type: "loadSample",
           sample,
+          bank: sample.bank,
           instrument: sample.instrument,
           keyRange: sample.keyRange,
           velRange: sample.velRange,
