@@ -47,7 +47,7 @@ export class SynthProcessor extends AudioWorkletProcessor {
   }
 
   getSample(channel: number, pitch: number, velocity: number): Sample | null {
-    const state = this.getChannel(channel)
+    const state = this.getChannelState(channel)
     // Play drums for CH.10
     const instrument =
       channel === RHYTHM_CHANNEL ? RHYTHM_INSTRUMENT : state.instrument
@@ -60,7 +60,7 @@ export class SynthProcessor extends AudioWorkletProcessor {
       case "noteOn": {
         const { pitch, velocity, channel } = e
         const sample = this.getSample(channel, pitch, velocity)
-        const state = this.getChannel(channel)
+        const state = this.getChannelState(channel)
 
         if (state.playingOscillators[pitch] !== undefined) {
           break
@@ -92,42 +92,42 @@ export class SynthProcessor extends AudioWorkletProcessor {
           // ignore note off
           break
         }
-        const state = this.getChannel(channel)
+        const state = this.getChannelState(channel)
         const oscillator = state.playingOscillators[pitch]
         oscillator?.noteOff()
         delete state.playingOscillators[pitch]
         break
       }
       case "pitchBend": {
-        const state = this.getChannel(e.channel)
+        const state = this.getChannelState(e.channel)
         state.pitchBend = (e.value / 0x2000 - 1) * state.pitchBendSensitivity
         break
       }
       case "volume": {
-        const state = this.getChannel(e.channel)
+        const state = this.getChannelState(e.channel)
         state.volume = e.value / 0x80
         break
       }
       case "programChange": {
-        const state = this.getChannel(e.channel)
+        const state = this.getChannelState(e.channel)
         state.instrument = e.value
         break
       }
       case "pitchBendSensitivity": {
-        const state = this.getChannel(e.channel)
+        const state = this.getChannelState(e.channel)
         state.pitchBendSensitivity = e.value
         break
       }
       case "mainVolume": {
-        const state = this.getChannel(e.channel)
+        const state = this.getChannelState(e.channel)
         state.volume = e.value / 0x80
       }
       case "expression": {
-        const state = this.getChannel(e.channel)
+        const state = this.getChannelState(e.channel)
         state.expression = e.value / 0x80
       }
       case "allSoundsOff": {
-        const state = this.getChannel(e.channel)
+        const state = this.getChannelState(e.channel)
         for (const oscillator of Object.values(state.playingOscillators)) {
           oscillator?.noteOff()
         }
@@ -137,7 +137,7 @@ export class SynthProcessor extends AudioWorkletProcessor {
     }
   }
 
-  private getChannel(channel: number): ChannelState {
+  private getChannelState(channel: number): ChannelState {
     const state = this.channels[channel]
     if (state !== undefined) {
       return state
