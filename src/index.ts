@@ -261,7 +261,7 @@ const main = async () => {
       postSynthMessage({
         type: "noteOn",
         pitch,
-        velocity: 128,
+        velocity: 127,
         channel: 0,
         delayTime: time * step,
       })
