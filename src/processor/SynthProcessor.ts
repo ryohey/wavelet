@@ -83,7 +83,6 @@ export class SynthProcessor extends AudioWorkletProcessor {
 
         const oscillator = new NoteOscillator(sample, sample.amplitudeEnvelope)
 
-        console.log("start oscillator", oscillator)
         const volume = velocity / 0x80
         oscillator.noteOn(pitch, volume)
 
