@@ -11,7 +11,7 @@ interface ChannelState {
   pitchBend: number // in semitone
   pitchBendSensitivity: number // in semitone
   expression: number // 0 to 1
-  playingOscillators: { [key: number]: NoteOscillator }
+  oscillators: { [key: number]: NoteOscillator[] }
 }
 
 const RHYTHM_CHANNEL = 9
@@ -72,10 +72,6 @@ export class SynthProcessor extends AudioWorkletProcessor {
         const { pitch, velocity, channel } = e
         const state = this.getChannelState(channel)
 
-        if (state.playingOscillators[pitch] !== undefined) {
-          break
-        }
-
         const sample = this.getSample(channel, pitch, velocity)
 
         if (sample === null) {
@@ -86,13 +82,20 @@ export class SynthProcessor extends AudioWorkletProcessor {
         }
 
         const oscillator = new NoteOscillator(sample, sample.amplitudeEnvelope)
-        state.playingOscillators[pitch] = oscillator
+
+        console.log("start oscillator", oscillator)
         const volume = velocity / 0x80
         oscillator.noteOn(pitch, volume)
 
         if (channel === RHYTHM_CHANNEL) {
           oscillator.noteOff()
         }
+
+        if (state.oscillators[pitch] === undefined) {
+          state.oscillators[pitch] = []
+        }
+        state.oscillators[pitch].push(oscillator)
+
         break
       }
       case "noteOff": {
@@ -102,8 +105,12 @@ export class SynthProcessor extends AudioWorkletProcessor {
           break
         }
         const state = this.getChannelState(channel)
-        const oscillator = state.playingOscillators[pitch]
-        oscillator?.noteOff()
+        const oscillator = state.oscillators[pitch]?.find(
+          (osc) => !osc.isNoteOff
+        )
+        if (oscillator !== undefined) {
+          oscillator.noteOff()
+        }
         break
       }
       case "pitchBend": {
@@ -136,10 +143,13 @@ export class SynthProcessor extends AudioWorkletProcessor {
       }
       case "allSoundsOff": {
         const state = this.getChannelState(e.channel)
-        for (const oscillator of Object.values(state.playingOscillators)) {
-          oscillator?.noteOff()
-        }
-        state.playingOscillators = []
+        Object.values(state.oscillators).forEach((list) =>
+          list.forEach((osc) => {
+            if (!osc.isNoteOff) {
+              osc.noteOff()
+            }
+          })
+        )
         break
       }
     }
@@ -156,7 +166,7 @@ export class SynthProcessor extends AudioWorkletProcessor {
       instrument: 0,
       pitchBend: 0,
       pitchBendSensitivity: 12,
-      playingOscillators: [],
+      oscillators: {},
       expression: 1,
     }
     this.channels[channel] = newState
@@ -176,15 +186,17 @@ export class SynthProcessor extends AudioWorkletProcessor {
     })
 
     Object.values(this.channels).forEach((state) => {
-      for (let key in state.playingOscillators) {
-        const oscillator = state.playingOscillators[key]
-        oscillator.speed = Math.pow(2, state.pitchBend / 12)
-        oscillator.volume = state.volume * state.expression
-        oscillator.process(buffer)
-        addBuffer(buffer, output)
-        if (!oscillator.isPlaying) {
-          delete state.playingOscillators[key]
+      for (let key in state.oscillators) {
+        for (const oscillator of state.oscillators[key]) {
+          oscillator.speed = Math.pow(2, state.pitchBend / 12)
+          oscillator.volume = state.volume * state.expression
+          oscillator.process(buffer)
+          addBuffer(buffer, output)
         }
+
+        state.oscillators[key] = state.oscillators[key]?.filter(
+          (osc) => osc.isPlaying
+        )
       }
     })
 

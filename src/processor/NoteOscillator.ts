@@ -8,6 +8,7 @@ import { WavetableOscillator } from "./WavetableOscillator"
 export class NoteOscillator {
   private wave: WavetableOscillator
   private envelope: AmplitudeEnvelope
+  private _isNoteOff = false
 
   constructor(
     sample: SampleData<Float32Array>,
@@ -26,6 +27,7 @@ export class NoteOscillator {
 
   noteOff() {
     this.envelope.noteOff()
+    this._isNoteOff = true
   }
 
   process(output: Float32Array) {
@@ -42,5 +44,9 @@ export class NoteOscillator {
 
   get isPlaying() {
     return this.wave.isPlaying && this.envelope.isPlaying
+  }
+
+  get isNoteOff() {
+    return this._isNoteOff
   }
 }
