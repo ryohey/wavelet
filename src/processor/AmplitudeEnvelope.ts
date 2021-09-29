@@ -28,7 +28,7 @@ export class AmplitudeEnvelope {
     const { attackTime, decayTime, sustainLevel, releaseTime } = this.parameter
 
     // Release
-    if (this.noteOffTime) {
+    if (this.noteOffTime !== null) {
       const relativeTime = time - this.noteOffTime
       if (relativeTime < releaseTime) {
         const ratio = relativeTime / releaseTime
