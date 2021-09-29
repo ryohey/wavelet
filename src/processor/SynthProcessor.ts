@@ -1,5 +1,4 @@
 import { DelayableEvent, SampleData, SynthEvent } from "../SynthEvent"
-import { AmplitudeEnvelopeParameter } from "./AmplitudeEnvelope"
 import { addBuffer } from "./bufferUtil"
 import { logger } from "./logger"
 import { NoteOscillator } from "./NoteOscillator"
@@ -86,13 +85,7 @@ export class SynthProcessor extends AudioWorkletProcessor {
           break
         }
 
-        const envelope: AmplitudeEnvelopeParameter = {
-          attackTime: 0,
-          decayTime: 0,
-          sustainLevel: 1,
-          releaseTime: 1000,
-        }
-        const oscillator = new NoteOscillator(sample, envelope)
+        const oscillator = new NoteOscillator(sample, sample.amplitudeEnvelope)
         state.playingOscillators[pitch] = oscillator
         const volume = velocity / 0x80
         oscillator.noteOn(pitch, volume)

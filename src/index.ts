@@ -101,6 +101,12 @@ const main = async () => {
               sampleStart: 0,
               sampleEnd: sample.buffer.byteLength,
               sampleRate: context.sampleRate,
+              amplitudeEnvelope: {
+                attackTime: 0,
+                decayTime: 0,
+                sustainLevel: 1,
+                releaseTime: 0,
+              },
             },
             bank: 0,
             instrument: instrument.instrument,

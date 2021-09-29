@@ -1,3 +1,5 @@
+import { AmplitudeEnvelopeParameter } from "./processor/AmplitudeEnvelope"
+
 export interface SampleLoop {
   start: number
   end: number
@@ -11,6 +13,7 @@ export interface SampleData<BufferType> {
   sampleStart: number
   sampleEnd: number
   sampleRate: number
+  amplitudeEnvelope: AmplitudeEnvelopeParameter
 }
 
 export interface LoadSampleEvent {

@@ -139,6 +139,12 @@ export const loadWaveletSamples = async function* (
               }
             : null,
         sampleRate: buffer.sampleRate,
+        amplitudeEnvelope: {
+          attackTime: 0,
+          decayTime: 0,
+          sustainLevel: 1,
+          releaseTime: 0,
+        },
       }
     }
   }
