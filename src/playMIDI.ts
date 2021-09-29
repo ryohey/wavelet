@@ -57,7 +57,6 @@ export const playMIDI = async (
     lastEventTime = timeInSec
 
     if (timeInSec - lastWaitTime / 1000 > readInterval + lookAheadTime) {
-      console.log("wait")
       await new Promise((resolve) => setTimeout(resolve, readInterval * 1000))
       const now = performance.now()
       waitTime += (now - lastWaitTime) / 1000
