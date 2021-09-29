@@ -1,4 +1,5 @@
 import { SampleData } from "../SynthEvent"
+import { AmplitudeEnvelope } from "./AmplitudeEnvelope"
 
 export class WavetableOscillator {
   private sample: SampleData<Float32Array>
@@ -6,10 +7,17 @@ export class WavetableOscillator {
   private _isPlaying = false
   private isLooping = false
   private baseSpeed = 1
-  speed = 1
+  private envelope: AmplitudeEnvelope
 
-  constructor(sample: SampleData<Float32Array>) {
+  speed = 1
+  // 0 to 1
+  velocity = 1
+  // 0 to 1
+  volume = 1
+
+  constructor(sample: SampleData<Float32Array>, envelope: AmplitudeEnvelope) {
     this.sample = sample
+    this.envelope = envelope
   }
 
   noteOn(pitch: number) {
@@ -19,11 +27,6 @@ export class WavetableOscillator {
     this.baseSpeed = Math.pow(2, (pitch - this.sample.pitch) / 12)
   }
 
-  noteOff() {
-    // finishing the sustain loop
-    this.isLooping = false
-  }
-
   process(output: Float32Array) {
     if (!this._isPlaying) {
       return
@@ -31,11 +34,13 @@ export class WavetableOscillator {
 
     const speed =
       (this.baseSpeed * this.speed * this.sample.sampleRate) / sampleRate
+    const volume = this.velocity * this.volume
 
     for (let i = 0; i < output.length; ++i) {
       if (this._isPlaying) {
         const index = Math.floor(this.sampleIndex)
-        output[i] = this.sample.buffer[index]
+        const gain = this.envelope.getAmplitude(i)
+        output[i] = this.sample.buffer[index] * gain * volume
       } else {
         // finish sample
         output[i] = 0
@@ -53,6 +58,8 @@ export class WavetableOscillator {
         this._isPlaying = false
       }
     }
+
+    this.envelope.advance(output.length)
   }
 
   get isPlaying() {
