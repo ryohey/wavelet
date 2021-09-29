@@ -41,6 +41,6 @@ export class NoteOscillator {
   }
 
   get isPlaying() {
-    return this.wave.isPlaying
+    return this.wave.isPlaying && this.envelope.isPlaying
   }
 }
