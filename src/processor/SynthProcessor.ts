@@ -90,6 +90,9 @@ export class SynthProcessor extends AudioWorkletProcessor {
         const volume = velocity / 0x80
         oscillator.noteOn(pitch, volume)
 
+        if (channel === RHYTHM_CHANNEL) {
+          oscillator.noteOff()
+        }
         break
       }
       case "noteOff": {
@@ -101,7 +104,6 @@ export class SynthProcessor extends AudioWorkletProcessor {
         const state = this.getChannelState(channel)
         const oscillator = state.playingOscillators[pitch]
         oscillator?.noteOff()
-        delete state.playingOscillators[pitch]
         break
       }
       case "pitchBend": {
@@ -174,12 +176,16 @@ export class SynthProcessor extends AudioWorkletProcessor {
     })
 
     Object.values(this.channels).forEach((state) => {
-      Object.values(state.playingOscillators).forEach((oscillator) => {
+      for (let key in state.playingOscillators) {
+        const oscillator = state.playingOscillators[key]
         oscillator.speed = Math.pow(2, state.pitchBend / 12)
         oscillator.volume = state.volume * state.expression
         oscillator.process(buffer)
         addBuffer(buffer, output)
-      })
+        if (!oscillator.isPlaying) {
+          delete state.playingOscillators[key]
+        }
+      }
     })
 
     // master volume
