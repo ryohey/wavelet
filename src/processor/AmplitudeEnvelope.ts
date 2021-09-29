@@ -9,6 +9,7 @@ export class AmplitudeEnvelope {
   private parameter: AmplitudeEnvelopeParameter
   private time = 0
   private noteOffTime: number | null = null
+  private _isPlaying = false
 
   constructor(parameter: AmplitudeEnvelopeParameter) {
     this.parameter = parameter
@@ -17,6 +18,7 @@ export class AmplitudeEnvelope {
   noteOn() {
     this.time = 0
     this.noteOffTime = null
+    this._isPlaying = true
   }
 
   noteOff() {
@@ -34,6 +36,7 @@ export class AmplitudeEnvelope {
         const ratio = relativeTime / releaseTime
         return sustainLevel * (1 - ratio)
       }
+      this._isPlaying = false
       return 0
     }
 
@@ -57,5 +60,9 @@ export class AmplitudeEnvelope {
 
   advance(time: number) {
     this.time += time
+  }
+
+  get isPlaying() {
+    return this._isPlaying
   }
 }
