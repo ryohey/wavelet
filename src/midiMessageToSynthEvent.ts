@@ -1,7 +1,8 @@
 import { SynthEvent } from "./SynthEvent"
 
 export const midiMessageToSynthEvent = (
-  data: Uint8Array
+  data: Uint8Array,
+  channel: number
 ): SynthEvent | null => {
   switch (data[0] & 0xf0) {
     case 0x90:
@@ -9,14 +10,14 @@ export const midiMessageToSynthEvent = (
         type: "noteOn",
         pitch: data[1],
         velocity: data[2],
-        channel: 0,
+        channel,
         delayTime: 0,
       }
     case 0x80:
       return {
         type: "noteOff",
         pitch: data[1],
-        channel: 0,
+        channel,
         delayTime: 0,
       }
     case 0xb0:
@@ -25,7 +26,7 @@ export const midiMessageToSynthEvent = (
           return {
             type: "volume",
             value: data[2],
-            channel: 0,
+            channel,
             delayTime: 0,
           }
       }

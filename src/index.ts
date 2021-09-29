@@ -192,6 +192,10 @@ const main = async () => {
     }
   }
 
+  const channelInput = document.getElementById(
+    "channel-input"
+  ) as HTMLInputElement
+
   const setupMIDIInput = async () => {
     const midiAccess = await (navigator as any).requestMIDIAccess({
       sysex: false,
@@ -199,7 +203,8 @@ const main = async () => {
 
     midiAccess.inputs.forEach((entry: any) => {
       entry.onmidimessage = (event: any) => {
-        const e = midiMessageToSynthEvent(event.data)
+        const channel = parseInt(channelInput.value)
+        const e = midiMessageToSynthEvent(event.data, channel)
         if (e !== null) {
           postSynthMessage(e)
           drawMidiMessage(e)
