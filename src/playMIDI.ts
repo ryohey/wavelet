@@ -28,29 +28,21 @@ export const playMIDI = async (
   sampleRate: number,
   postMessage: (e: SynthEvent) => void
 ) => {
-  const secToTick = (sec: number) => {
-    const beat = sec * (tempo / 60)
-    return beat * midi.header.ticksPerBeat
-  }
-
-  const tickToSec = (tick: number) => {
-    const beat = tick / midi.header.ticksPerBeat
-    return beat / (tempo / 60)
-  }
-
-  const tickToFrameTime = (tick: number) => {
-    return sampleRate * tickToSec(tick)
-  }
-
   const tickedEvents = midi.tracks
     .flatMap(addTick)
     .sort((a, b) => b.tick - a.tick)
 
   let waitTime = 0
-  let lastTick = 0
-  let lastTime = performance.now()
+  let lastEventTick = 0
+  let lastEventTime = 0
+  let lastWaitTime = performance.now()
   let lastControllerEvents: { [track: number]: ControllerEvent | null } = {}
   let tempo = 120
+
+  const tickToSec = (tick: number) => {
+    const beat = tick / midi.header.ticksPerBeat
+    return beat / (tempo / 60)
+  }
 
   while (true) {
     const e = tickedEvents.pop()
@@ -59,14 +51,17 @@ export const playMIDI = async (
       break
     }
 
-    const timeInSec = tickToSec(e.tick)
+    const deltaTick = e.tick - lastEventTick
+    lastEventTick = e.tick
+    const timeInSec = tickToSec(deltaTick) + lastEventTime
+    lastEventTime = timeInSec
 
-    if (tickToSec(e.tick - lastTick) > readInterval + lookAheadTime) {
+    if (timeInSec - lastWaitTime / 1000 > readInterval + lookAheadTime) {
+      console.log("wait")
       await new Promise((resolve) => setTimeout(resolve, readInterval * 1000))
       const now = performance.now()
-      waitTime += (now - lastTime) / 1000
-      lastTime = now
-      lastTick = e.tick
+      waitTime += (now - lastWaitTime) / 1000
+      lastWaitTime = now
     }
 
     const delayTime = (timeInSec - waitTime) * sampleRate
