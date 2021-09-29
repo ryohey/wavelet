@@ -7,130 +7,158 @@ interface State {
   readonly ticksPerBeat: number
 }
 
-async function* playMIDITrack(
-  track: AnyEvent[],
-  state: State,
-  readInterval = 0.5,
-  lookAheadTime = 0.2
-): AsyncGenerator<SynthEvent> {
+interface Tick {
+  tick: number
+  track: number
+}
+
+function addTick(track: AnyEvent[]): (AnyEvent & Tick)[] {
+  let tick = 0
+  return track.map((e, track) => {
+    tick += e.deltaTime
+    return { ...e, tick, track }
+  })
+}
+
+const readInterval = 0.5
+const lookAheadTime = 0.2
+
+export const playMIDI = async (
+  midi: MidiFile,
+  sampleRate: number,
+  postMessage: (e: SynthEvent) => void
+) => {
+  const secToTick = (sec: number) => {
+    const beat = sec * (tempo / 60)
+    return beat * midi.header.ticksPerBeat
+  }
+
   const tickToSec = (tick: number) => {
-    const beat = tick / state.ticksPerBeat
-    return beat / (state.tempo / 60)
+    const beat = tick / midi.header.ticksPerBeat
+    return beat / (tempo / 60)
   }
 
   const tickToFrameTime = (tick: number) => {
-    return state.sampleRate * tickToSec(tick)
+    return sampleRate * tickToSec(tick)
   }
 
-  const secToTick = (sec: number) => {
-    const beat = sec * (state.tempo / 60)
-    return beat * state.ticksPerBeat
-  }
+  const tickedEvents = midi.tracks
+    .flatMap(addTick)
+    .sort((a, b) => b.tick - a.tick)
 
-  let time = 0
+  let waitTime = 0
+  let lastTick = 0
   let lastTime = performance.now()
-  let lastControllerEvent: ControllerEvent | null = null
+  let lastControllerEvents: { [track: number]: ControllerEvent | null } = {}
+  let tempo = 120
 
-  for await (const e of track) {
-    time += e.deltaTime
+  while (true) {
+    const e = tickedEvents.pop()
 
-    if (tickToSec(time) > readInterval + lookAheadTime) {
-      await new Promise((resolve) => setTimeout(resolve, readInterval * 1000))
-      const now = performance.now()
-      time -= secToTick((now - lastTime) / 1000)
-      lastTime = now
+    if (e === undefined) {
+      break
     }
 
-    const delayTime = tickToFrameTime(time)
+    const timeInSec = tickToSec(e.tick)
+
+    if (tickToSec(e.tick - lastTick) > readInterval + lookAheadTime) {
+      await new Promise((resolve) => setTimeout(resolve, readInterval * 1000))
+      const now = performance.now()
+      waitTime += (now - lastTime) / 1000
+      lastTime = now
+      lastTick = e.tick
+    }
+
+    const delayTime = (timeInSec - waitTime) * sampleRate
 
     switch (e.type) {
       case "channel":
         switch (e.subtype) {
           case "noteOn":
-            yield {
+            postMessage({
               type: "noteOn",
               pitch: e.noteNumber,
               velocity: e.velocity,
               channel: e.channel,
               delayTime,
-            }
+            })
             break
           case "noteOff":
-            yield {
+            postMessage({
               type: "noteOff",
               pitch: e.noteNumber,
               channel: e.channel,
               delayTime,
-            }
+            })
             break
           case "programChange":
-            yield {
+            postMessage({
               type: "programChange",
               channel: e.channel,
               value: e.value,
               delayTime,
-            }
+            })
             break
           case "pitchBend":
-            yield {
+            postMessage({
               type: "pitchBend",
               channel: e.channel,
               value: e.value,
               delayTime,
-            }
+            })
             break
           case "controller": {
             switch (e.controllerType) {
               case 101:
                 break
               case 100:
-                if (lastControllerEvent?.controllerType !== 101) {
+                if (lastControllerEvents[e.track]?.controllerType !== 101) {
                   console.warn(`invalid RPN`)
                 }
                 break
               case 6: {
-                switch (lastControllerEvent?.controllerType) {
+                switch (lastControllerEvents[e.track]?.controllerType) {
                   case 0:
                     // pitch bend sensitivity
-                    yield {
+                    postMessage({
                       type: "pitchBendSensitivity",
                       channel: e.channel,
                       value: e.value,
                       delayTime,
-                    }
+                    })
                     console.log(e)
                     break
                 }
                 break
               }
               case 7:
-                yield {
+                postMessage({
                   type: "mainVolume",
                   channel: e.channel,
                   value: e.value,
                   delayTime,
-                }
+                })
                 break
               case 11:
-                yield {
+                postMessage({
                   type: "expression",
                   channel: e.channel,
                   value: e.value,
                   delayTime,
-                }
+                })
                 break
               case 120:
-                yield {
+                postMessage({
                   type: "allSoundsOff",
                   channel: e.channel,
                   delayTime,
-                }
+                })
                 break
               default:
                 console.warn(`not supported controller event`, e)
                 break
             }
-            lastControllerEvent = e
+            lastControllerEvents[e.track] = e
             break
           }
           default:
@@ -141,7 +169,7 @@ async function* playMIDITrack(
       case "meta":
         switch (e.subtype) {
           case "setTempo":
-            state.tempo = (60 * 1000000) / e.microsecondsPerBeat
+            tempo = (60 * 1000000) / e.microsecondsPerBeat
             break
           default:
             console.warn(`not supported meta event`, e)
@@ -149,22 +177,4 @@ async function* playMIDITrack(
         }
     }
   }
-}
-
-export const playMIDI = (
-  midi: MidiFile,
-  sampleRate: number,
-  postMessage: (e: SynthEvent) => void
-) => {
-  const state: State = {
-    tempo: 120,
-    sampleRate,
-    ticksPerBeat: midi.header.ticksPerBeat,
-  }
-
-  midi.tracks.forEach(async (t) => {
-    for await (const event of playMIDITrack(t, state)) {
-      postMessage(event)
-    }
-  })
 }
