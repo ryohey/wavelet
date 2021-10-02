@@ -7,8 +7,8 @@ export interface AmplitudeEnvelopeParameter {
 
 export class AmplitudeEnvelope {
   private parameter: AmplitudeEnvelopeParameter
-  private time = 0
-  private noteOffTime: number | null = null
+  private frame = 0
+  private noteOffFrame: number | null = null
   private _isPlaying = false
 
   constructor(parameter: AmplitudeEnvelopeParameter) {
@@ -16,22 +16,22 @@ export class AmplitudeEnvelope {
   }
 
   noteOn() {
-    this.time = 0
-    this.noteOffTime = null
+    this.frame = 0
+    this.noteOffFrame = null
     this._isPlaying = true
   }
 
   noteOff() {
-    this.noteOffTime = this.time
+    this.noteOffFrame = this.frame
   }
 
-  getAmplitude(deltaTime: number): number {
-    const time = this.time + deltaTime
+  getAmplitude(deltaFrame: number): number {
+    const time = this.frame + deltaFrame
     const { attackTime, decayTime, sustainLevel, releaseTime } = this.parameter
 
     // Release
-    if (this.noteOffTime !== null) {
-      const relativeTime = time - this.noteOffTime
+    if (this.noteOffFrame !== null) {
+      const relativeTime = time - this.noteOffFrame
       if (relativeTime < releaseTime) {
         const ratio = relativeTime / releaseTime
         return sustainLevel * (1 - ratio)
@@ -58,8 +58,8 @@ export class AmplitudeEnvelope {
     return sustainLevel
   }
 
-  advance(time: number) {
-    this.time += time
+  advance(frame: number) {
+    this.frame += frame
   }
 
   get isPlaying() {
