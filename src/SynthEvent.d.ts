@@ -91,6 +91,12 @@ export type AllSoundsOffEvent = DelayTime &
     type: "allSoundsOff"
   }
 
+export type HoldEvent = DelayTime &
+  Channel & {
+    type: "hold"
+    value: number
+  }
+
 export type DelayableEvent =
   | NoteOnEvent
   | NoteOffEvent
@@ -101,6 +107,7 @@ export type DelayableEvent =
   | MainVolumeEvent
   | ExpressionEvent
   | AllSoundsOffEvent
+  | HoldEvent
 
 export type SynthEvent = LoadSampleEvent | DelayableEvent
 

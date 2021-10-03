@@ -9,6 +9,7 @@ export class NoteOscillator {
   private wave: WavetableOscillator
   private envelope: AmplitudeEnvelope
   private _isNoteOff = false
+  private isHold = false
 
   constructor(
     sample: SampleData<Float32Array>,
@@ -26,12 +27,24 @@ export class NoteOscillator {
   }
 
   noteOff() {
+    if (this.isHold) {
+      return
+    }
+
     this.envelope.noteOff()
     this._isNoteOff = true
   }
 
   process(output: Float32Array) {
     this.wave.process(output)
+  }
+
+  setHold(hold: boolean) {
+    this.isHold = hold
+
+    if (!hold && !this._isNoteOff) {
+      this.noteOff()
+    }
   }
 
   set speed(value: number) {

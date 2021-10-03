@@ -155,6 +155,14 @@ export const playMIDI = async (
                   delayTime,
                 })
                 break
+              case 64:
+                postMessage({
+                  type: "hold",
+                  channel: e.channel,
+                  value: e.value,
+                  delayTime,
+                })
+                break
               default:
                 console.warn(`not supported controller event`, e)
                 break

@@ -155,6 +155,14 @@ export class SynthProcessor extends AudioWorkletProcessor {
         )
         break
       }
+      case "hold": {
+        const hold = e.value >= 64
+        const state = this.getChannelState(e.channel)
+        Object.values(state.oscillators).forEach((list) =>
+          list.forEach((osc) => osc.setHold(hold))
+        )
+        break
+      }
     }
   }
 
