@@ -14,6 +14,16 @@ interface ChannelState {
   oscillators: { [key: number]: NoteOscillator[] }
 }
 
+const initialChannelState = (): ChannelState => ({
+  volume: 1,
+  bank: 0,
+  instrument: 0,
+  pitchBend: 0,
+  pitchBendSensitivity: 12,
+  oscillators: {},
+  expression: 1,
+})
+
 const RHYTHM_CHANNEL = 9
 const RHYTHM_BANK = 128
 
@@ -151,15 +161,7 @@ export class SynthProcessor extends AudioWorkletProcessor {
     if (state !== undefined) {
       return state
     }
-    const newState: ChannelState = {
-      volume: 1,
-      bank: 0,
-      instrument: 0,
-      pitchBend: 0,
-      pitchBendSensitivity: 12,
-      oscillators: {},
-      expression: 1,
-    }
+    const newState = initialChannelState()
     this.channels[channel] = newState
     return newState
   }
