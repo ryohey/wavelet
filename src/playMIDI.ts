@@ -23,48 +23,22 @@ function addTick(track: AnyEvent[]): (AnyEvent & Tick)[] {
 const readInterval = 0.5
 const lookAheadTime = 0.2
 
+interface RPN {
+  rpnMSB: ControllerEvent
+  rpnLSB?: ControllerEvent
+  dataMSB?: ControllerEvent
+  dataLSB?: ControllerEvent
+}
+
 export const playMIDI = async (
   midi: MidiFile,
   sampleRate: number,
   postMessage: (e: SynthEvent) => void
 ) => {
-  const tickedEvents = midi.tracks
-    .flatMap(addTick)
-    .sort((a, b) => b.tick - a.tick)
-
-  let waitTime = 0
-  let lastEventTick = 0
-  let lastEventTime = 0
-  let lastWaitTime = performance.now()
-  let lastControllerEvents: { [track: number]: ControllerEvent | null } = {}
+  let rpnEvents: { [track: number]: RPN | undefined } = {}
   let tempo = 120
 
-  const tickToSec = (tick: number) => {
-    const beat = tick / midi.header.ticksPerBeat
-    return beat / (tempo / 60)
-  }
-
-  while (true) {
-    const e = tickedEvents.pop()
-
-    if (e === undefined) {
-      break
-    }
-
-    const deltaTick = e.tick - lastEventTick
-    lastEventTick = e.tick
-    const timeInSec = tickToSec(deltaTick) + lastEventTime
-    lastEventTime = timeInSec
-
-    if (timeInSec - lastWaitTime / 1000 > readInterval + lookAheadTime) {
-      await new Promise((resolve) => setTimeout(resolve, readInterval * 1000))
-      const now = performance.now()
-      waitTime += (now - lastWaitTime) / 1000
-      lastWaitTime = now
-    }
-
-    const delayTime = (timeInSec - waitTime) * sampleRate
-
+  const handleEvent = (e: AnyEvent & Tick, delayTime: number) => {
     switch (e.type) {
       case "channel":
         switch (e.subtype) {
@@ -104,24 +78,57 @@ export const playMIDI = async (
           case "controller": {
             switch (e.controllerType) {
               case 101:
+                rpnEvents[e.track] = {
+                  rpnMSB: e,
+                }
                 break
               case 100:
-                if (lastControllerEvents[e.track]?.controllerType !== 101) {
+                // RPN LSB
+                const rpn = rpnEvents[e.track]
+                if (rpn === undefined) {
                   console.warn(`invalid RPN`)
+                  delete rpnEvents[e.track]
+                } else {
+                  rpn.rpnLSB = e
                 }
                 break
               case 6: {
-                switch (lastControllerEvents[e.track]?.controllerType) {
-                  case 0:
-                    // pitch bend sensitivity
-                    postMessage({
-                      type: "pitchBendSensitivity",
-                      channel: e.channel,
-                      value: e.value,
-                      delayTime,
-                    })
-                    console.log(e)
-                    break
+                const rpn = rpnEvents[e.track]
+                if (rpn === undefined || rpn.rpnLSB === undefined) {
+                  console.warn(`invalid RPN`)
+                  delete rpnEvents[e.track]
+                } else {
+                  rpn.dataMSB = e
+                }
+                break
+              }
+              case 38: {
+                const rpn = rpnEvents[e.track]
+                if (
+                  rpn === undefined ||
+                  rpn.rpnLSB === undefined ||
+                  rpn.dataMSB === undefined
+                ) {
+                  console.warn(`invalid RPN`)
+                  delete rpnEvents[e.track]
+                } else {
+                  rpn.dataLSB = e
+
+                  // Data MSB
+                  switch (rpn.rpnLSB.value) {
+                    case 0:
+                      // pitch bend sensitivity
+                      postMessage({
+                        type: "pitchBendSensitivity",
+                        channel: e.channel,
+                        value: rpn.dataMSB.value,
+                        delayTime,
+                      })
+                      console.log(e)
+                      break
+                  }
+
+                  delete rpnEvents[e.track]
                 }
                 break
               }
@@ -152,7 +159,6 @@ export const playMIDI = async (
                 console.warn(`not supported controller event`, e)
                 break
             }
-            lastControllerEvents[e.track] = e
             break
           }
           default:
@@ -170,5 +176,42 @@ export const playMIDI = async (
             break
         }
     }
+  }
+
+  const tickedEvents = midi.tracks
+    .flatMap(addTick)
+    .sort((a, b) => a.tick - b.tick)
+
+  let waitTime = 0
+  let lastEventTick = 0
+  let lastEventTime = 0
+  let lastWaitTime = performance.now()
+
+  const tickToSec = (tick: number) => {
+    const beat = tick / midi.header.ticksPerBeat
+    return beat / (tempo / 60)
+  }
+
+  while (true) {
+    const e = tickedEvents.shift()
+
+    if (e === undefined) {
+      break
+    }
+
+    const deltaTick = e.tick - lastEventTick
+    lastEventTick = e.tick
+    const timeInSec = tickToSec(deltaTick) + lastEventTime
+    lastEventTime = timeInSec
+
+    if (timeInSec - lastWaitTime / 1000 > readInterval + lookAheadTime) {
+      await new Promise((resolve) => setTimeout(resolve, readInterval * 1000))
+      const now = performance.now()
+      waitTime += (now - lastWaitTime) / 1000
+      lastWaitTime = now
+    }
+
+    const delayTime = (timeInSec - waitTime) * sampleRate
+    handleEvent(e, delayTime)
   }
 }
