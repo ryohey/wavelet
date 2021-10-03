@@ -26,12 +26,13 @@ export class AmplitudeEnvelope {
   }
 
   getAmplitude(deltaFrame: number): number {
-    const time = this.frame + deltaFrame
+    const frame = this.frame + deltaFrame
+    const time = frame / sampleRate
     const { attackTime, decayTime, sustainLevel, releaseTime } = this.parameter
 
     // Release
     if (this.noteOffFrame !== null) {
-      const relativeTime = time - this.noteOffFrame
+      const relativeTime = (frame - this.noteOffFrame) / sampleRate
       if (relativeTime < releaseTime) {
         const ratio = relativeTime / releaseTime
         return sustainLevel * (1 - ratio)
