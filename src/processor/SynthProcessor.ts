@@ -137,10 +137,12 @@ export class SynthProcessor extends AudioWorkletProcessor {
       case "mainVolume": {
         const state = this.getChannelState(e.channel)
         state.volume = e.value / 0x80
+        break
       }
       case "expression": {
         const state = this.getChannelState(e.channel)
         state.expression = e.value / 0x80
+        break
       }
       case "allSoundsOff": {
         const state = this.getChannelState(e.channel)
