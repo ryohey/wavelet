@@ -11,6 +11,7 @@ interface ChannelState {
   pitchBend: number // in semitone
   pitchBendSensitivity: number // in semitone
   expression: number // 0 to 1
+  pan: number // -1 to 1
   oscillators: { [key: number]: NoteOscillator[] }
 }
 
@@ -22,6 +23,7 @@ const initialChannelState = (): ChannelState => ({
   pitchBendSensitivity: 12,
   oscillators: {},
   expression: 1,
+  pan: 0,
 })
 
 const RHYTHM_CHANNEL = 9
@@ -163,6 +165,11 @@ export class SynthProcessor extends AudioWorkletProcessor {
         )
         break
       }
+      case "pan": {
+        const state = this.getChannelState(e.channel)
+        state.pan = (e.value / 127 - 0.5) * 2
+        break
+      }
     }
   }
 
@@ -177,8 +184,8 @@ export class SynthProcessor extends AudioWorkletProcessor {
   }
 
   process(_inputs: Float32Array[][], outputs: Float32Array[][]) {
-    const output = outputs[0][0]
-    const buffer = new Float32Array(output.length)
+    const bufferLeft = new Float32Array(outputs[0][0].length)
+    const bufferRight = new Float32Array(outputs[0][1].length)
 
     this.eventBuffer = this.eventBuffer.filter((e) => {
       if (e.receivedFrame + e.delayTime <= currentFrame) {
@@ -193,8 +200,10 @@ export class SynthProcessor extends AudioWorkletProcessor {
         for (const oscillator of state.oscillators[key]) {
           oscillator.speed = Math.pow(2, state.pitchBend / 12)
           oscillator.volume = state.volume * state.expression
-          oscillator.process(buffer)
-          addBuffer(buffer, output)
+          oscillator.pan = state.pan
+          oscillator.process([bufferLeft, bufferRight])
+          addBuffer(bufferLeft, outputs[0][0])
+          addBuffer(bufferRight, outputs[0][1])
         }
 
         state.oscillators[key] = state.oscillators[key]?.filter(
@@ -205,8 +214,9 @@ export class SynthProcessor extends AudioWorkletProcessor {
 
     // master volume
     const masterVolume = 0.3
-    for (let i = 0; i < output.length; ++i) {
-      output[i] *= masterVolume
+    for (let i = 0; i < outputs[0][0].length; ++i) {
+      outputs[0][0][i] *= masterVolume
+      outputs[0][1][i] *= masterVolume
     }
 
     return true

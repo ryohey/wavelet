@@ -65,7 +65,10 @@ const main = async () => {
     } catch (e) {
       console.error("Failed to add AudioWorklet module", e)
     }
-    synth = new AudioWorkletNode(context, "synth-processor")
+    synth = new AudioWorkletNode(context, "synth-processor", {
+      numberOfInputs: 0,
+      outputChannelCount: [2],
+    } as any)
     synth.connect(context.destination)
   }
 

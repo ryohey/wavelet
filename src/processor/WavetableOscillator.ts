@@ -15,6 +15,9 @@ export class WavetableOscillator {
   // 0 to 1
   volume = 1
 
+  // -1 to 1
+  pan = 0
+
   constructor(sample: SampleData<Float32Array>, envelope: AmplitudeEnvelope) {
     this.sample = sample
     this.envelope = envelope
@@ -30,7 +33,7 @@ export class WavetableOscillator {
     )
   }
 
-  process(output: Float32Array) {
+  process(outputs: Float32Array[]) {
     if (!this._isPlaying) {
       return
     }
@@ -39,10 +42,16 @@ export class WavetableOscillator {
       (this.baseSpeed * this.speed * this.sample.sampleRate) / sampleRate
     const volume = this.velocity * this.volume
 
-    for (let i = 0; i < output.length; ++i) {
+    // zero to pi/2
+    const panTheta = ((this.pan + 1) * Math.PI) / 4
+    const leftPanVolume = Math.cos(panTheta)
+    const rightPanVolume = Math.sin(panTheta)
+
+    for (let i = 0; i < outputs[0].length; ++i) {
       if (!this._isPlaying) {
         // finish sample
-        output[i] = 0
+        outputs[0][i] = 0
+        outputs[1][i] = 0
         continue
       }
 
@@ -69,8 +78,10 @@ export class WavetableOscillator {
       const current = this.sample.buffer[index]
       const next = this.sample.buffer[nextIndex]
       const level = current + (next - current) * (this.sampleIndex - index)
+      const value = level * gain * volume
 
-      output[i] = level * gain * volume
+      outputs[0][i] = value * leftPanVolume
+      outputs[1][i] = value * rightPanVolume
 
       this.sampleIndex = loopIndex ?? advancedIndex
 

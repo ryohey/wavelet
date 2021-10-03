@@ -97,6 +97,12 @@ export type HoldEvent = DelayTime &
     value: number
   }
 
+export type PanEvent = DelayTime &
+  Channel & {
+    type: "pan"
+    value: number
+  }
+
 export type DelayableEvent =
   | NoteOnEvent
   | NoteOffEvent
@@ -108,6 +114,7 @@ export type DelayableEvent =
   | ExpressionEvent
   | AllSoundsOffEvent
   | HoldEvent
+  | PanEvent
 
 export type SynthEvent = LoadSampleEvent | DelayableEvent
 

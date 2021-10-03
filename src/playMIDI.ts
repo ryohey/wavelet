@@ -140,6 +140,14 @@ export const playMIDI = async (
                   delayTime,
                 })
                 break
+              case 10:
+                postMessage({
+                  type: "pan",
+                  channel: e.channel,
+                  value: e.value,
+                  delayTime,
+                })
+                break
               case 11:
                 postMessage({
                   type: "expression",

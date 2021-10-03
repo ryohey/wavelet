@@ -35,8 +35,8 @@ export class NoteOscillator {
     this._isNoteOff = true
   }
 
-  process(output: Float32Array) {
-    this.wave.process(output)
+  process(outputs: Float32Array[]) {
+    this.wave.process(outputs)
   }
 
   setHold(hold: boolean) {
@@ -53,6 +53,10 @@ export class NoteOscillator {
 
   set volume(value: number) {
     this.wave.volume = value
+  }
+
+  set pan(value: number) {
+    this.wave.pan = value
   }
 
   get isPlaying() {
