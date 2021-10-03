@@ -40,6 +40,12 @@ export class WavetableOscillator {
     const volume = this.velocity * this.volume
 
     for (let i = 0; i < output.length; ++i) {
+      if (!this._isPlaying) {
+        // finish sample
+        output[i] = 0
+        continue
+      }
+
       const index = Math.floor(this.sampleIndex)
       const advancedIndex = this.sampleIndex + speed
       let loopIndex: number | null = null
@@ -53,23 +59,18 @@ export class WavetableOscillator {
           this.sample.loop.start + (advancedIndex - Math.floor(advancedIndex))
       }
 
-      if (this._isPlaying) {
-        const nextIndex =
-          loopIndex !== null
-            ? Math.floor(loopIndex)
-            : Math.min(index + 1, this.sample.sampleEnd)
-        const gain = this.envelope.getAmplitude(i)
+      const nextIndex =
+        loopIndex !== null
+          ? Math.floor(loopIndex)
+          : Math.min(index + 1, this.sample.sampleEnd - 1)
+      const gain = this.envelope.getAmplitude()
 
-        // linear interpolation
-        const current = this.sample.buffer[index]
-        const next = this.sample.buffer[nextIndex]
-        const level = current + (next - current) * (this.sampleIndex - index)
+      // linear interpolation
+      const current = this.sample.buffer[index]
+      const next = this.sample.buffer[nextIndex]
+      const level = current + (next - current) * (this.sampleIndex - index)
 
-        output[i] = level * gain * volume
-      } else {
-        // finish sample
-        output[i] = 0
-      }
+      output[i] = level * gain * volume
 
       this.sampleIndex = loopIndex ?? advancedIndex
 
@@ -78,8 +79,6 @@ export class WavetableOscillator {
         break
       }
     }
-
-    this.envelope.advance(output.length)
   }
 
   get isPlaying() {

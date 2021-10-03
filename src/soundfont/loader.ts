@@ -122,7 +122,7 @@ export const loadSoundFontSamples = async function* (
 
       const amplitudeEnvelope = {
         attackTime: convertTime(gen.volAttack),
-        decayTime: convertTime(gen.volDecay),
+        decayTime: convertTime(gen.volDecay) / 4,
         sustainLevel: 1 - gen.volSustain / 1000,
         releaseTime: convertTime(gen.volRelease) / 4,
       }

@@ -86,10 +86,6 @@ export class SynthProcessor extends AudioWorkletProcessor {
         const volume = velocity / 0x80
         oscillator.noteOn(pitch, volume)
 
-        if (channel === RHYTHM_CHANNEL) {
-          oscillator.noteOff()
-        }
-
         if (state.oscillators[pitch] === undefined) {
           state.oscillators[pitch] = []
         }
@@ -99,10 +95,6 @@ export class SynthProcessor extends AudioWorkletProcessor {
       }
       case "noteOff": {
         const { pitch, channel } = e
-        if (channel === RHYTHM_CHANNEL) {
-          // ignore note off
-          break
-        }
         const state = this.getChannelState(channel)
         const oscillator = state.oscillators[pitch]?.find(
           (osc) => !osc.isNoteOff
