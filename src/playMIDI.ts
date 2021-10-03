@@ -12,9 +12,9 @@ interface Tick {
   track: number
 }
 
-function addTick(track: AnyEvent[]): (AnyEvent & Tick)[] {
+function addTick(events: AnyEvent[], track: number): (AnyEvent & Tick)[] {
   let tick = 0
-  return track.map((e, track) => {
+  return events.map((e) => {
     tick += e.deltaTime
     return { ...e, tick, track }
   })
