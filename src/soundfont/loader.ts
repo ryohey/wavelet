@@ -71,45 +71,28 @@ export const loadSoundFontSamples = async function* (
       }
 
       const tune = gen.coarseTune + gen.fineTune / 100
+
       const basePitch =
         tune +
         sampleHeader.pitchCorrection / 100 -
         (gen.overridingRootKey ?? sampleHeader.originalPitch)
-      const scaleTuning = gen.scaleTuning / 100
 
-      const note = {
-        sample,
-        sampleRate: sampleHeader.sampleRate,
-        sampleName: sampleHeader.sampleName,
-        sampleModes: gen.sampleModes,
-        playbackRate: (key: number) =>
-          Math.pow(Math.pow(2, 1 / 12), (key + basePitch) * scaleTuning),
-        modEnvToPitch: gen.modEnvToPitch / 100, // cent
-        scaleTuning,
-        start: gen.startAddrsCoarseOffset * 32768 + gen.startAddrsOffset,
-        end: gen.endAddrsCoarseOffset * 32768 + gen.endAddrsOffset,
-        loopStart:
-          sampleHeader.loopStart +
-          gen.startloopAddrsCoarseOffset * 32768 +
-          gen.startloopAddrsOffset,
-        loopEnd:
-          sampleHeader.loopEnd +
-          gen.endloopAddrsCoarseOffset * 32768 +
-          gen.endloopAddrsOffset,
-        keyRange: gen.keyRange,
-        velRange: gen.velRange,
-        initialFilterFc: gen.initialFilterFc,
-        modEnvToFilterFc: gen.modEnvToFilterFc, // semitone (100 cent)
-        initialFilterQ: gen.initialFilterQ,
-        initialAttenuation: gen.initialAttenuation,
-        freqVibLFO: gen.freqVibLFO
-          ? convertTime(gen.freqVibLFO) * 8.176
-          : undefined,
-        pan: gen.pan,
-        mute: false,
-      }
+      const sampleStart =
+        gen.startAddrsCoarseOffset * 32768 + gen.startAddrsOffset
 
-      const sample2 = note.sample.subarray(0, note.sample.length + note.end)
+      const sampleEnd = gen.endAddrsCoarseOffset * 32768 + gen.endAddrsOffset
+
+      const loopStart =
+        sampleHeader.loopStart +
+        gen.startloopAddrsCoarseOffset * 32768 +
+        gen.startloopAddrsOffset
+
+      const loopEnd =
+        sampleHeader.loopEnd +
+        gen.endloopAddrsCoarseOffset * 32768 +
+        gen.endloopAddrsOffset
+
+      const sample2 = sample.subarray(0, sample.length + sampleEnd)
 
       const audioBuffer = ctx.createBuffer(
         1,
@@ -132,13 +115,13 @@ export const loadSoundFontSamples = async function* (
         buffer: audioData.buffer,
         pitch: -basePitch,
         name: sampleHeader.sampleName,
-        sampleStart: note.start,
-        sampleEnd: note.end === 0 ? audioData.length : note.end,
+        sampleStart,
+        sampleEnd: sampleEnd === 0 ? audioData.length : sampleEnd,
         loop:
-          note.sampleModes === 1 && note.loopEnd > 0
+          gen.sampleModes === 1 && loopEnd > 0
             ? {
-                start: note.loopStart,
-                end: note.loopEnd,
+                start: loopStart,
+                end: loopEnd,
               }
             : null,
         instrument: presetHeader.preset,
@@ -147,7 +130,7 @@ export const loadSoundFontSamples = async function* (
         velRange: [gen.velRange.lo, gen.velRange.hi],
         sampleRate: sampleHeader.sampleRate,
         amplitudeEnvelope,
-        scaleTuning,
+        scaleTuning: gen.scaleTuning / 100,
         pan: (gen.pan ?? 0) / 500,
         exclusiveClass: gen.exclusiveClass,
       }
