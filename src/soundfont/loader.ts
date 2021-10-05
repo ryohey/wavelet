@@ -122,10 +122,10 @@ export const loadSoundFontSamples = async function* (
       })
 
       const amplitudeEnvelope = {
-        attackTime: convertTime(gen.attackVolEnv),
-        decayTime: convertTime(gen.decayVolEnv) / 4,
+        attackTime: timeCentToSec(gen.attackVolEnv),
+        decayTime: timeCentToSec(gen.decayVolEnv) / 4,
         sustainLevel: 1 - gen.sustainVolEnv / 1000,
-        releaseTime: convertTime(gen.releaseVolEnv) / 4,
+        releaseTime: timeCentToSec(gen.releaseVolEnv) / 4,
       }
 
       yield {
@@ -157,6 +157,22 @@ export const loadSoundFontSamples = async function* (
 
 function convertTime(value: number) {
   return Math.pow(2, value / 1200)
+}
+
+function timeCentToSec(value: number) {
+  if (value <= -32768) {
+    return 0
+  }
+
+  if (value < -12000) {
+    value = -12000
+  }
+
+  if (value > 8000) {
+    value = 8000
+  }
+
+  return convertTime(value)
 }
 
 function removeUndefined<T>(obj: T) {
