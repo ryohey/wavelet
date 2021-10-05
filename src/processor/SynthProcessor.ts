@@ -101,7 +101,17 @@ export class SynthProcessor extends AudioWorkletProcessor {
         if (state.oscillators[pitch] === undefined) {
           state.oscillators[pitch] = []
         }
+
+        if (sample.exclusiveClass !== undefined) {
+          Object.values(state.oscillators)
+            .flatMap((list) => list)
+            .filter((osc) => osc.exclusiveClass === sample.exclusiveClass)
+            .forEach((osc) => osc.forceStop())
+        }
+
         state.oscillators[pitch].push(oscillator)
+
+        console.log(`note on ${pitch}`)
 
         break
       }
@@ -113,6 +123,7 @@ export class SynthProcessor extends AudioWorkletProcessor {
         )
         if (oscillator !== undefined) {
           oscillator.noteOff()
+          console.log(`note off ${pitch}`)
         }
         break
       }

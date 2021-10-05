@@ -149,6 +149,7 @@ export const loadSoundFontSamples = async function* (
         amplitudeEnvelope,
         scaleTuning,
         pan: (gen.pan ?? 0) / 500,
+        exclusiveClass: gen.exclusiveClass,
       }
     }
   }

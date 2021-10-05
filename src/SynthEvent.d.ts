@@ -19,6 +19,7 @@ export interface SampleData<BufferType> {
   // a value of 1 represents the usual tempered semitone scale.
   scaleTuning: number
   pan: number
+  exclusiveClass?: number | undefined
 }
 
 export interface LoadSampleEvent {

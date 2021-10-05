@@ -10,8 +10,11 @@ enum EnvelopePhase {
   decay,
   sustain,
   release,
+  forceStop,
   stopped,
 }
+
+const forceStopReleaseTime = 0.1
 
 export class AmplitudeEnvelope {
   private parameter: AmplitudeEnvelopeParameter
@@ -27,7 +30,14 @@ export class AmplitudeEnvelope {
   }
 
   noteOff() {
-    this.phase = EnvelopePhase.release
+    if (this.phase !== EnvelopePhase.forceStop) {
+      this.phase = EnvelopePhase.release
+    }
+  }
+
+  // Rapidly decrease the volume. This method ignores release time parameter
+  forceStop() {
+    this.phase = EnvelopePhase.forceStop
   }
 
   getAmplitude(): number {
@@ -68,6 +78,17 @@ export class AmplitudeEnvelope {
       }
       case EnvelopePhase.release: {
         const attenuationPerFrame = 1 / (releaseTime * sampleRate)
+        const value = this.lastAmplitude - attenuationPerFrame
+        if (value <= 0) {
+          this.phase = EnvelopePhase.stopped
+          this.lastAmplitude = 0
+          return 0
+        }
+        this.lastAmplitude = value
+        return value
+      }
+      case EnvelopePhase.forceStop: {
+        const attenuationPerFrame = 1 / (forceStopReleaseTime * sampleRate)
         const value = this.lastAmplitude - attenuationPerFrame
         if (value <= 0) {
           this.phase = EnvelopePhase.stopped

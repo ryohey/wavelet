@@ -6,8 +6,8 @@ import {
 import { WavetableOscillator } from "./WavetableOscillator"
 
 export class NoteOscillator {
-  private wave: WavetableOscillator
-  private envelope: AmplitudeEnvelope
+  private readonly wave: WavetableOscillator
+  private readonly envelope: AmplitudeEnvelope
   private _isNoteOff = false
   private isHold = false
 
@@ -33,6 +33,11 @@ export class NoteOscillator {
 
     this.envelope.noteOff()
     this._isNoteOff = true
+  }
+
+  forceStop() {
+    this.envelope.forceStop()
+    console.log("force stop")
   }
 
   process(outputs: Float32Array[]) {
@@ -65,5 +70,9 @@ export class NoteOscillator {
 
   get isNoteOff() {
     return this._isNoteOff
+  }
+
+  get exclusiveClass() {
+    return this.wave.sample.exclusiveClass
   }
 }

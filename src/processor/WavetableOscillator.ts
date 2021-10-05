@@ -2,12 +2,12 @@ import { SampleData } from "../SynthEvent"
 import { AmplitudeEnvelope } from "./AmplitudeEnvelope"
 
 export class WavetableOscillator {
-  private sample: SampleData<Float32Array>
+  readonly sample: SampleData<Float32Array>
   private sampleIndex = 0
   private _isPlaying = false
   private isLooping = false
   private baseSpeed = 1
-  private envelope: AmplitudeEnvelope
+  private readonly envelope: AmplitudeEnvelope
 
   speed = 1
   // 0 to 1
