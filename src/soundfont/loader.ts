@@ -31,6 +31,9 @@ export const loadSoundFontSamples = async function* (
         "Invalid SoundFont: invalid preset generator: expect instrument"
       )
     }
+
+    const presetZone = Parser.createGeneraterObject(presetGenerators)
+
     const instrumentID = lastPresetGenertor.value as number
     const instrumentZones = Parser.getInstrumentGenerators(
       parsed,
@@ -54,6 +57,17 @@ export const loadSoundFontSamples = async function* (
         ...Parser.defaultInstrumentZone,
         ...removeUndefined(globalInstrumentZone ?? {}),
         ...removeUndefined(zone),
+      }
+
+      // add presetGenerator value
+      for (const key of Object.keys(gen) as (keyof Parser.GeneratorParams)[]) {
+        if (
+          key in presetZone &&
+          typeof gen[key] === "number" &&
+          typeof presetZone[key] === "number"
+        ) {
+          gen[key] += presetZone[key]
+        }
       }
 
       const tune = gen.coarseTune + gen.fineTune / 100
