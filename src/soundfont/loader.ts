@@ -147,6 +147,7 @@ export const loadSoundFontSamples = async function* (
         sampleRate: sampleHeader.sampleRate,
         amplitudeEnvelope,
         scaleTuning,
+        pan: (gen.pan ?? 0) / 500,
       }
     }
   }

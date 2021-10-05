@@ -111,6 +111,7 @@ const main = async () => {
                 sustainLevel: 1,
                 releaseTime: 0,
               },
+              pan: 0,
             },
             bank: 0,
             instrument: instrument.instrument,

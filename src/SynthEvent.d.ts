@@ -18,6 +18,7 @@ export interface SampleData<BufferType> {
   // A value of zero indicates that MIDI key number has no effect on pitch
   // a value of 1 represents the usual tempered semitone scale.
   scaleTuning: number
+  pan: number
 }
 
 export interface LoadSampleEvent {

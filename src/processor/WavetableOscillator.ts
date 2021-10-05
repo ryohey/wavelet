@@ -43,7 +43,9 @@ export class WavetableOscillator {
     const volume = this.velocity * this.volume
 
     // zero to pi/2
-    const panTheta = ((this.pan + 1) * Math.PI) / 4
+    const panTheta =
+      ((Math.min(1, Math.max(-1, this.pan + this.sample.pan)) + 1) * Math.PI) /
+      4
     const leftPanVolume = Math.cos(panTheta)
     const rightPanVolume = Math.sin(panTheta)
 

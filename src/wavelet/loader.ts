@@ -146,6 +146,7 @@ export const loadWaveletSamples = async function* (
           sustainLevel: 1,
           releaseTime: 0,
         },
+        pan: 0,
       }
     }
   }
