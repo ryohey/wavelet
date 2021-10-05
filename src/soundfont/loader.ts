@@ -1,6 +1,5 @@
 import { Parser } from "@ryohey/sf2synth"
 import { SoundFont } from "@ryohey/sf2synth/bin/parser"
-import { RangeValue } from "@ryohey/sf2synth/bin/parser/Structs"
 import { SampleData } from "../SynthEvent"
 
 export type SoundFontSample = SampleData<ArrayBuffer> & {
@@ -33,9 +32,10 @@ export const loadSoundFontSamples = async function* (
       )
     }
     const instrumentID = lastPresetGenertor.value as number
-    const instrumentZones = soundFont
-      .getInstrumentZoneIndexes(instrumentID)
-      .map((i) => soundFont.getInstrumentZone(i))
+    const instrumentZones = Parser.getInstrumentGenerators(
+      parsed,
+      instrumentID
+    ).map(Parser.createGeneraterObject)
 
     // 最初のゾーンがsampleID を持たなければ global instrument zone
     let globalInstrumentZone: any | undefined
@@ -51,7 +51,7 @@ export const loadSoundFontSamples = async function* (
       const sampleHeader = parsed.sampleHeaders[zone.sampleID!]
 
       const gen = {
-        ...defaultInstrumentZone,
+        ...Parser.defaultInstrumentZone,
         ...removeUndefined(globalInstrumentZone ?? {}),
         ...removeUndefined(zone),
       }
@@ -82,18 +82,6 @@ export const loadSoundFontSamples = async function* (
           sampleHeader.loopEnd +
           gen.endloopAddrsCoarseOffset * 32768 +
           gen.endloopAddrsOffset,
-        volDelay: convertTime(gen.volDelay),
-        volAttack: convertTime(gen.volAttack),
-        volHold: convertTime(gen.volHold),
-        volDecay: convertTime(gen.volDecay),
-        volSustain: gen.volSustain / 1000,
-        volRelease: convertTime(gen.volRelease),
-        modDelay: convertTime(gen.modDelay),
-        modAttack: convertTime(gen.modAttack),
-        modHold: convertTime(gen.modHold),
-        modDecay: convertTime(gen.modDecay),
-        modSustain: gen.modSustain / 1000,
-        modRelease: convertTime(gen.modRelease),
         keyRange: gen.keyRange,
         velRange: gen.velRange,
         initialFilterFc: gen.initialFilterFc,
@@ -105,7 +93,6 @@ export const loadSoundFontSamples = async function* (
           : undefined,
         pan: gen.pan,
         mute: false,
-        releaseTime: gen.releaseTime,
       }
 
       const sample2 = note.sample.subarray(0, note.sample.length + note.end)
@@ -121,10 +108,10 @@ export const loadSoundFontSamples = async function* (
       })
 
       const amplitudeEnvelope = {
-        attackTime: convertTime(gen.volAttack),
-        decayTime: convertTime(gen.volDecay) / 4,
-        sustainLevel: 1 - gen.volSustain / 1000,
-        releaseTime: convertTime(gen.volRelease) / 4,
+        attackTime: convertTime(gen.attackVolEnv),
+        decayTime: convertTime(gen.decayVolEnv) / 4,
+        sustainLevel: 1 - gen.sustainVolEnv / 1000,
+        releaseTime: convertTime(gen.releaseVolEnv) / 4,
       }
 
       yield {
@@ -151,46 +138,6 @@ export const loadSoundFontSamples = async function* (
       }
     }
   }
-}
-
-const defaultInstrumentZone = {
-  keyRange: new RangeValue(0, 127),
-  velRange: new RangeValue(0, 127),
-  sampleID: undefined,
-  volDelay: -12000,
-  volAttack: -12000,
-  volDecay: -12000,
-  volHold: -12000,
-  volSustain: 0,
-  volRelease: -12000,
-  modDelay: -12000,
-  modAttack: -12000,
-  modHold: -12000,
-  modDecay: -12000,
-  modSustain: 0,
-  modRelease: -12000,
-  modEnvToPitch: 0,
-  modEnvToFilterFc: 0,
-  coarseTune: 0,
-  fineTune: 0,
-  scaleTuning: 100,
-  freqVibLFO: 0,
-  startAddrsOffset: 0,
-  startAddrsCoarseOffset: 0,
-  endAddrsOffset: 0,
-  endAddrsCoarseOffset: 0,
-  startloopAddrsOffset: 0,
-  startloopAddrsCoarseOffset: 0,
-  initialAttenuation: 0,
-  endloopAddrsOffset: 0,
-  endloopAddrsCoarseOffset: 0,
-  overridingRootKey: undefined,
-  initialFilterQ: 1,
-  initialFilterFc: 13500,
-  sampleModes: 0,
-  mute: false,
-  releaseTime: 64,
-  pan: undefined,
 }
 
 function convertTime(value: number) {
