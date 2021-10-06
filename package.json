@@ -24,7 +24,7 @@
   },
   "dependencies": {
     "@ryohey/sf2synth": "github:ryohey/sf2synth.js#ccb4443",
-    "midifile-ts": "^1.2.2",
+    "midifile-ts": "^1.3.0",
     "string-to-arraybuffer": "^1.0.2"
   }
 }

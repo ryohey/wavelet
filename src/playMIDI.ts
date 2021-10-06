@@ -1,4 +1,9 @@
-import { AnyEvent, ControllerEvent, MidiFile } from "midifile-ts"
+import {
+  AnyEvent,
+  ControllerEvent,
+  MIDIControlEvents,
+  MidiFile,
+} from "midifile-ts"
 import { SynthEvent } from "./SynthEvent"
 
 interface State {
@@ -77,13 +82,12 @@ export const playMIDI = async (
             break
           case "controller": {
             switch (e.controllerType) {
-              case 98: // NRPN MSB
-              case 98: // NRPN LSB
+              case MIDIControlEvents.NONREG_PARM_NUM_MSB:
+              case MIDIControlEvents.NONREG_PARM_NUM_LSB: // NRPN LSB
                 // Delete the rpn for do not send NRPN data events
                 delete rpnEvents[e.channel]
                 break
-              case 101: {
-                // RPN MSB
+              case MIDIControlEvents.REGIST_PARM_NUM_MSB: {
                 if (e.value === 127) {
                   delete rpnEvents[e.channel]
                 } else {
@@ -94,8 +98,7 @@ export const playMIDI = async (
                 }
                 break
               }
-              case 100: {
-                // RPN LSB
+              case MIDIControlEvents.REGIST_PARM_NUM_LSB: {
                 if (e.value === 127) {
                   delete rpnEvents[e.channel]
                 } else {
@@ -106,8 +109,7 @@ export const playMIDI = async (
                 }
                 break
               }
-              case 6: {
-                // Data MSB
+              case MIDIControlEvents.MSB_DATA_ENTRY: {
                 const rpn = {
                   ...rpnEvents[e.channel],
                   dataMSB: e,
@@ -126,8 +128,7 @@ export const playMIDI = async (
                 }
                 break
               }
-              case 38: {
-                // Data LSB
+              case MIDIControlEvents.LSB_DATA_ENTRY: {
                 rpnEvents[e.channel] = {
                   ...rpnEvents[e.channel],
                   dataLSB: e,
@@ -135,7 +136,7 @@ export const playMIDI = async (
                 // TODO: Send other RPN events
                 break
               }
-              case 7:
+              case MIDIControlEvents.MSB_MAIN_VOLUME:
                 postMessage({
                   type: "mainVolume",
                   channel: e.channel,
@@ -143,7 +144,7 @@ export const playMIDI = async (
                   delayTime,
                 })
                 break
-              case 10:
+              case MIDIControlEvents.MSB_PAN:
                 postMessage({
                   type: "pan",
                   channel: e.channel,
@@ -151,7 +152,7 @@ export const playMIDI = async (
                   delayTime,
                 })
                 break
-              case 11:
+              case MIDIControlEvents.MSB_EXPRESSION:
                 postMessage({
                   type: "expression",
                   channel: e.channel,
@@ -159,14 +160,14 @@ export const playMIDI = async (
                   delayTime,
                 })
                 break
-              case 120:
+              case MIDIControlEvents.ALL_SOUNDS_OFF:
                 postMessage({
                   type: "allSoundsOff",
                   channel: e.channel,
                   delayTime,
                 })
                 break
-              case 64:
+              case MIDIControlEvents.SUSTAIN:
                 postMessage({
                   type: "hold",
                   channel: e.channel,
