@@ -25,8 +25,8 @@ function addTick(events: AnyEvent[], track: number): (AnyEvent & Tick)[] {
   })
 }
 
-const readInterval = 0.5
-const lookAheadTime = 0.2
+const readInterval = 0.1
+const lookAheadTime = 0.05
 
 interface RPN {
   rpnMSB?: ControllerEvent
