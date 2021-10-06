@@ -20,7 +20,7 @@ const initialChannelState = (): ChannelState => ({
   bank: 0,
   instrument: 0,
   pitchBend: 0,
-  pitchBendSensitivity: 12,
+  pitchBendSensitivity: 2,
   oscillators: {},
   expression: 1,
   pan: 0,
