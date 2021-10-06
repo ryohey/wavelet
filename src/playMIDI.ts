@@ -24,7 +24,7 @@ const readInterval = 0.5
 const lookAheadTime = 0.2
 
 interface RPN {
-  rpnMSB: ControllerEvent
+  rpnMSB?: ControllerEvent
   rpnLSB?: ControllerEvent
   dataMSB?: ControllerEvent
   dataLSB?: ControllerEvent
@@ -77,59 +77,62 @@ export const playMIDI = async (
             break
           case "controller": {
             switch (e.controllerType) {
-              case 101:
-                rpnEvents[e.track] = {
-                  rpnMSB: e,
+              case 98: // NRPN MSB
+              case 98: // NRPN LSB
+                // Delete the rpn for do not send NRPN data events
+                delete rpnEvents[e.track]
+                break
+              case 101: {
+                // RPN MSB
+                if (e.value === 127) {
+                  delete rpnEvents[e.track]
+                } else {
+                  rpnEvents[e.track] = {
+                    ...rpnEvents[e.track],
+                    rpnMSB: e,
+                  }
                 }
                 break
-              case 100:
+              }
+              case 100: {
                 // RPN LSB
-                const rpn = rpnEvents[e.track]
-                if (rpn === undefined) {
-                  console.warn(`invalid RPN`)
+                if (e.value === 127) {
                   delete rpnEvents[e.track]
                 } else {
-                  rpn.rpnLSB = e
+                  rpnEvents[e.track] = {
+                    ...rpnEvents[e.track],
+                    rpnLSB: e,
+                  }
                 }
                 break
+              }
               case 6: {
-                const rpn = rpnEvents[e.track]
-                if (rpn === undefined || rpn.rpnLSB === undefined) {
-                  console.warn(`invalid RPN`)
-                  delete rpnEvents[e.track]
-                } else {
-                  rpn.dataMSB = e
+                // Data MSB
+                const rpn = {
+                  ...rpnEvents[e.track],
+                  dataMSB: e,
+                }
+                rpnEvents[e.track] = rpn
+
+                // In case of pitch bend sensitivity,
+                // send without waiting for Data LSB event
+                if (rpn.rpnLSB?.value === 0) {
+                  postMessage({
+                    type: "pitchBendSensitivity",
+                    channel: e.channel,
+                    value: rpn.dataMSB.value,
+                    delayTime,
+                  })
                 }
                 break
               }
               case 38: {
-                const rpn = rpnEvents[e.track]
-                if (
-                  rpn === undefined ||
-                  rpn.rpnLSB === undefined ||
-                  rpn.dataMSB === undefined
-                ) {
-                  console.warn(`invalid RPN`)
-                  delete rpnEvents[e.track]
-                } else {
-                  rpn.dataLSB = e
-
-                  // Data MSB
-                  switch (rpn.rpnLSB.value) {
-                    case 0:
-                      // pitch bend sensitivity
-                      postMessage({
-                        type: "pitchBendSensitivity",
-                        channel: e.channel,
-                        value: rpn.dataMSB.value,
-                        delayTime,
-                      })
-                      console.log(e)
-                      break
-                  }
-
-                  delete rpnEvents[e.track]
+                // Data LSB
+                rpnEvents[e.track] = {
+                  ...rpnEvents[e.track],
+                  dataLSB: e,
                 }
+                // TODO: Send other RPN events
                 break
               }
               case 7:
