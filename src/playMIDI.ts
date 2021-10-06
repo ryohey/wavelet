@@ -42,6 +42,7 @@ export const playMIDI = async (
 ) => {
   let rpnEvents: { [channel: number]: RPN | undefined } = {}
   let tempo = 120
+  let bankSelectMSB: { [channel: number]: number | undefined } = {}
 
   const handleEvent = (e: AnyEvent & Tick, delayTime: number) => {
     switch (e.type) {
@@ -175,6 +176,22 @@ export const playMIDI = async (
                   delayTime,
                 })
                 break
+              case MIDIControlEvents.MSB_BANK:
+                bankSelectMSB[e.channel] = e.value
+                break
+              case MIDIControlEvents.LSB_BANK: {
+                const msb = bankSelectMSB[e.channel]
+                if (msb !== undefined) {
+                  const bank = (msb << 7) + e.value
+                  postMessage({
+                    type: "bankSelect",
+                    channel: e.channel,
+                    value: bank,
+                    delayTime,
+                  })
+                }
+                break
+              }
               default:
                 console.warn(`not supported controller event`, e)
                 break

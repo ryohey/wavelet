@@ -188,6 +188,11 @@ export class SynthProcessor extends AudioWorkletProcessor {
         state.pan = (e.value / 127 - 0.5) * 2
         break
       }
+      case "bankSelect": {
+        const state = this.getChannelState(e.channel)
+        state.bank = e.value
+        break
+      }
     }
   }
 

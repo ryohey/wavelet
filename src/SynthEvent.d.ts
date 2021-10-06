@@ -105,6 +105,12 @@ export type PanEvent = DelayTime &
     value: number
   }
 
+export type BankSelectEvent = DelayTime &
+  Channel & {
+    type: "bankSelect"
+    value: number
+  }
+
 export type DelayableEvent =
   | NoteOnEvent
   | NoteOffEvent
@@ -117,6 +123,7 @@ export type DelayableEvent =
   | AllSoundsOffEvent
   | HoldEvent
   | PanEvent
+  | BankSelectEvent
 
 export type SynthEvent = LoadSampleEvent | DelayableEvent
 
