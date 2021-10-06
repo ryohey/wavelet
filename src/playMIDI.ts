@@ -35,7 +35,7 @@ export const playMIDI = async (
   sampleRate: number,
   postMessage: (e: SynthEvent) => void
 ) => {
-  let rpnEvents: { [track: number]: RPN | undefined } = {}
+  let rpnEvents: { [channel: number]: RPN | undefined } = {}
   let tempo = 120
 
   const handleEvent = (e: AnyEvent & Tick, delayTime: number) => {
@@ -80,15 +80,15 @@ export const playMIDI = async (
               case 98: // NRPN MSB
               case 98: // NRPN LSB
                 // Delete the rpn for do not send NRPN data events
-                delete rpnEvents[e.track]
+                delete rpnEvents[e.channel]
                 break
               case 101: {
                 // RPN MSB
                 if (e.value === 127) {
-                  delete rpnEvents[e.track]
+                  delete rpnEvents[e.channel]
                 } else {
-                  rpnEvents[e.track] = {
-                    ...rpnEvents[e.track],
+                  rpnEvents[e.channel] = {
+                    ...rpnEvents[e.channel],
                     rpnMSB: e,
                   }
                 }
@@ -97,10 +97,10 @@ export const playMIDI = async (
               case 100: {
                 // RPN LSB
                 if (e.value === 127) {
-                  delete rpnEvents[e.track]
+                  delete rpnEvents[e.channel]
                 } else {
-                  rpnEvents[e.track] = {
-                    ...rpnEvents[e.track],
+                  rpnEvents[e.channel] = {
+                    ...rpnEvents[e.channel],
                     rpnLSB: e,
                   }
                 }
@@ -109,10 +109,10 @@ export const playMIDI = async (
               case 6: {
                 // Data MSB
                 const rpn = {
-                  ...rpnEvents[e.track],
+                  ...rpnEvents[e.channel],
                   dataMSB: e,
                 }
-                rpnEvents[e.track] = rpn
+                rpnEvents[e.channel] = rpn
 
                 // In case of pitch bend sensitivity,
                 // send without waiting for Data LSB event
@@ -128,8 +128,8 @@ export const playMIDI = async (
               }
               case 38: {
                 // Data LSB
-                rpnEvents[e.track] = {
-                  ...rpnEvents[e.track],
+                rpnEvents[e.channel] = {
+                  ...rpnEvents[e.channel],
                   dataLSB: e,
                 }
                 // TODO: Send other RPN events
