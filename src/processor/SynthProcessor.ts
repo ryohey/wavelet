@@ -1,5 +1,6 @@
 import {
   DelayableEvent,
+  NoteOffEvent,
   NoteOnEvent,
   SampleData,
   SynthEvent,
@@ -82,58 +83,57 @@ export class SynthProcessor extends AudioWorkletProcessor {
     return this.sampleTable.getSamples(bank, state.instrument, pitch, velocity)
   }
 
-  private noteOn({ pitch, velocity, channel }: NoteOnEvent) {}
+  private noteOn({ pitch, velocity, channel }: NoteOnEvent) {
+    const state = this.getChannelState(channel)
+
+    const samples = this.getSamples(channel, pitch, velocity)
+
+    if (samples.length === 0) {
+      logger.warn(
+        `There is no sample for noteNumber ${pitch} in instrument ${state.instrument} in bank ${state.bank}`
+      )
+      return
+    }
+
+    for (const sample of samples) {
+      const oscillator = new NoteOscillator(sample, sample.amplitudeEnvelope)
+
+      const volume = velocity / 0x80
+      oscillator.noteOn(pitch, volume)
+
+      if (state.oscillators[pitch] === undefined) {
+        state.oscillators[pitch] = []
+      }
+
+      if (sample.exclusiveClass !== undefined) {
+        Object.values(state.oscillators)
+          .flatMap((list) => list)
+          .filter((osc) => osc.exclusiveClass === sample.exclusiveClass)
+          .forEach((osc) => osc.forceStop())
+      }
+
+      state.oscillators[pitch].push(oscillator)
+    }
+  }
+
+  private noteOff({ pitch, channel }: NoteOffEvent) {
+    const state = this.getChannelState(channel)
+    state.oscillators[pitch]
+      ?.filter((osc) => !osc.isNoteOff)
+      ?.forEach((oscillator) => {
+        oscillator.noteOff()
+      })
+  }
 
   handleDelayableEvent(e: DelayableEvent) {
     logger.log("handle delayable event", e)
     switch (e.type) {
-      case "noteOn": {
-        const { pitch, velocity, channel } = e
-        const state = this.getChannelState(channel)
-
-        const samples = this.getSamples(channel, pitch, velocity)
-
-        if (samples.length === 0) {
-          logger.warn(
-            `There is no sample for noteNumber ${pitch} in instrument ${state.instrument} in bank ${state.bank}`
-          )
-          break
-        }
-
-        for (const sample of samples) {
-          const oscillator = new NoteOscillator(
-            sample,
-            sample.amplitudeEnvelope
-          )
-
-          const volume = velocity / 0x80
-          oscillator.noteOn(pitch, volume)
-
-          if (state.oscillators[pitch] === undefined) {
-            state.oscillators[pitch] = []
-          }
-
-          if (sample.exclusiveClass !== undefined) {
-            Object.values(state.oscillators)
-              .flatMap((list) => list)
-              .filter((osc) => osc.exclusiveClass === sample.exclusiveClass)
-              .forEach((osc) => osc.forceStop())
-          }
-
-          state.oscillators[pitch].push(oscillator)
-        }
+      case "noteOn":
+        this.noteOn(e)
         break
-      }
-      case "noteOff": {
-        const { pitch, channel } = e
-        const state = this.getChannelState(channel)
-        state.oscillators[pitch]
-          ?.filter((osc) => !osc.isNoteOff)
-          ?.forEach((oscillator) => {
-            oscillator.noteOff()
-          })
+      case "noteOff":
+        this.noteOff(e)
         break
-      }
       case "pitchBend": {
         const state = this.getChannelState(e.channel)
         state.pitchBend = (e.value / 0x2000 - 1) * state.pitchBendSensitivity
