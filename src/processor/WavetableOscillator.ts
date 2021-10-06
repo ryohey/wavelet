@@ -1,5 +1,6 @@
 import { SampleData } from "../SynthEvent"
 import { AmplitudeEnvelope } from "./AmplitudeEnvelope"
+import { LFO } from "./LFO"
 
 export class WavetableOscillator {
   readonly sample: SampleData<Float32Array>
@@ -8,6 +9,7 @@ export class WavetableOscillator {
   private isLooping = false
   private baseSpeed = 1
   private readonly envelope: AmplitudeEnvelope
+  private readonly pitchLFO: LFO
 
   speed = 1
   // 0 to 1
@@ -15,12 +17,18 @@ export class WavetableOscillator {
   // 0 to 1
   volume = 1
 
+  modulation = 0
+
+  // cent
+  modulationDepthRange = 50
+
   // -1 to 1
   pan = 0
 
   constructor(sample: SampleData<Float32Array>, envelope: AmplitudeEnvelope) {
     this.sample = sample
     this.envelope = envelope
+    this.pitchLFO = new LFO()
   }
 
   noteOn(pitch: number) {
@@ -31,6 +39,7 @@ export class WavetableOscillator {
       2,
       ((pitch - this.sample.pitch) / 12) * this.sample.scaleTuning
     )
+    this.pitchLFO.frequency = 5
   }
 
   process(outputs: Float32Array[]) {
@@ -57,8 +66,14 @@ export class WavetableOscillator {
         continue
       }
 
+      const gain = this.envelope.getAmplitude()
+      const pitchModulation =
+        this.pitchLFO.getValue() *
+        this.modulation *
+        (this.modulationDepthRange / 1200)
+
       const index = Math.floor(this.sampleIndex)
-      const advancedIndex = this.sampleIndex + speed
+      const advancedIndex = this.sampleIndex + speed * (1 + pitchModulation)
       let loopIndex: number | null = null
 
       if (
@@ -74,7 +89,6 @@ export class WavetableOscillator {
         loopIndex !== null
           ? Math.floor(loopIndex)
           : Math.min(index + 1, this.sample.sampleEnd - 1)
-      const gain = this.envelope.getAmplitude()
 
       // linear interpolation
       const current = this.sample.buffer[index]

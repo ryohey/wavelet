@@ -259,7 +259,7 @@ const main = async () => {
   document.getElementById("button-test")?.addEventListener("click", () => {
     context.resume()
 
-    const channel = 9
+    const channel = 0
 
     postSynthMessage({
       type: "programChange",
@@ -268,7 +268,7 @@ const main = async () => {
       delayTime: 0,
     })
 
-    const step = context.sampleRate * 0.5
+    const step = context.sampleRate * 5
     let time = 0
     for (let pitch = 12 * 3; pitch < 128; pitch++) {
       postSynthMessage({

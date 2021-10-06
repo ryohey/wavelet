@@ -111,6 +111,12 @@ export type BankSelectEvent = DelayTime &
     value: number
   }
 
+export type ModulationEvent = DelayTime &
+  Channel & {
+    type: "modulation"
+    value: number
+  }
+
 export type DelayableEvent =
   | NoteOnEvent
   | NoteOffEvent
@@ -124,6 +130,7 @@ export type DelayableEvent =
   | HoldEvent
   | PanEvent
   | BankSelectEvent
+  | ModulationEvent
 
 export type SynthEvent = LoadSampleEvent | DelayableEvent
 

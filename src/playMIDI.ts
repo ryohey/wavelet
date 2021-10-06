@@ -192,6 +192,14 @@ export const playMIDI = async (
                 }
                 break
               }
+              case MIDIControlEvents.MSB_MODWHEEL:
+                postMessage({
+                  type: "modulation",
+                  channel: e.channel,
+                  value: e.value,
+                  delayTime,
+                })
+                break
               default:
                 console.warn(`not supported controller event`, e)
                 break

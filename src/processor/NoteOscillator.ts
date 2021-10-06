@@ -64,6 +64,10 @@ export class NoteOscillator {
     this.wave.pan = value
   }
 
+  set modulation(value: number) {
+    this.wave.modulation = value
+  }
+
   get isPlaying() {
     return this.wave.isPlaying && this.envelope.isPlaying
   }
