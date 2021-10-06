@@ -34,17 +34,17 @@ export class SampleTable {
     }
   }
 
-  getSample(
+  getSamples(
     bank: number,
     instrument: number,
     pitch: number,
     velocity: number
-  ): Sample | null {
+  ): Sample[] {
     const samples = this.samples?.[bank]?.[instrument]?.[pitch]
     return (
-      samples?.find(
+      samples?.filter(
         (s) => velocity >= s.velRange[0] && velocity <= s.velRange[1]
-      ) ?? null
+      ) ?? []
     )
   }
 }
