@@ -1,5 +1,5 @@
 import { Parser } from "@ryohey/sf2synth"
-import { SoundFont } from "@ryohey/sf2synth/bin/parser"
+import { getPresetGenerators } from "@ryohey/sf2synth/bin/parser"
 import { SampleData } from "../SynthEvent"
 
 export type SoundFontSample = SampleData<ArrayBuffer> & {
@@ -17,11 +17,10 @@ export const loadSoundFontSamples = async function* (
   let progress = 0
   const data = await (await fetch(url)).arrayBuffer()
   const parsed = Parser.parse(new Uint8Array(data))
-  const soundFont = new SoundFont(parsed)
 
   for (let i = 0; i < parsed.presetHeaders.length; i++) {
     const presetHeader = parsed.presetHeaders[i]
-    const presetGenerators = soundFont.getPresetZone(i)
+    const presetGenerators = getPresetGenerators(parsed, i)
 
     for (const lastPresetGenertor of presetGenerators.filter(
       (gen) => gen.type === "instrument"

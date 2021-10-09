@@ -5,7 +5,8 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "start": "rollup --config --watch"
+    "start": "rollup --config --watch",
+    "build": "rollup --config"
   },
   "author": "ryohey",
   "license": "MIT",
