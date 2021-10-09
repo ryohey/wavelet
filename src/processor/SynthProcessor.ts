@@ -107,10 +107,13 @@ export class SynthProcessor extends AudioWorkletProcessor {
       }
 
       if (sample.exclusiveClass !== undefined) {
-        Object.values(state.oscillators)
-          .flatMap((list) => list)
-          .filter((osc) => osc.exclusiveClass === sample.exclusiveClass)
-          .forEach((osc) => osc.forceStop())
+        for (const key in state.oscillators) {
+          for (const osc of state.oscillators[key]) {
+            if (osc.exclusiveClass === sample.exclusiveClass) {
+              osc.forceStop()
+            }
+          }
+        }
       }
 
       state.oscillators[pitch].push(oscillator)
@@ -119,11 +122,16 @@ export class SynthProcessor extends AudioWorkletProcessor {
 
   private noteOff({ pitch, channel }: NoteOffEvent) {
     const state = this.getChannelState(channel)
-    state.oscillators[pitch]
-      ?.filter((osc) => !osc.isNoteOff)
-      ?.forEach((oscillator) => {
-        oscillator.noteOff()
-      })
+
+    if (state.oscillators[pitch] === undefined) {
+      return
+    }
+
+    for (const osc of state.oscillators[pitch]) {
+      if (!osc.isNoteOff) {
+        osc.noteOff()
+      }
+    }
   }
 
   handleDelayableEvent(e: DelayableEvent) {
@@ -167,21 +175,25 @@ export class SynthProcessor extends AudioWorkletProcessor {
       }
       case "allSoundsOff": {
         const state = this.getChannelState(e.channel)
-        Object.values(state.oscillators).forEach((list) =>
-          list.forEach((osc) => {
+
+        for (const key in state.oscillators) {
+          for (const osc of state.oscillators[key]) {
             if (!osc.isNoteOff) {
               osc.noteOff()
             }
-          })
-        )
+          }
+        }
         break
       }
       case "hold": {
         const hold = e.value >= 64
         const state = this.getChannelState(e.channel)
-        Object.values(state.oscillators).forEach((list) =>
-          list.forEach((osc) => osc.setHold(hold))
-        )
+
+        for (const key in state.oscillators) {
+          for (const osc of state.oscillators[key]) {
+            osc.setHold(hold)
+          }
+        }
         break
       }
       case "pan": {
@@ -221,7 +233,9 @@ export class SynthProcessor extends AudioWorkletProcessor {
       return true
     })
 
-    Object.values(this.channels).forEach((state) => {
+    for (const channel in this.channels) {
+      const state = this.channels[channel]
+
       for (let key in state.oscillators) {
         for (const oscillator of state.oscillators[key]) {
           oscillator.speed = Math.pow(2, state.pitchBend / 12)
@@ -235,7 +249,7 @@ export class SynthProcessor extends AudioWorkletProcessor {
           (osc) => osc.isPlaying
         )
       }
-    })
+    }
 
     // master volume
     const masterVolume = 0.3
