@@ -83,13 +83,6 @@ export class WavetableOscillator {
       pitchLFOValue * this.modulation * (this.modulationDepthRange / 1200)
 
     for (let i = 0; i < outputs[0].length; ++i) {
-      if (!this._isPlaying) {
-        // finish sample
-        outputs[0][i] = 0
-        outputs[1][i] = 0
-        continue
-      }
-
       const index = Math.floor(this.sampleIndex)
       const advancedIndex = this.sampleIndex + speed * (1 + pitchModulation)
       let loopIndex: number | null = null
@@ -113,8 +106,8 @@ export class WavetableOscillator {
       const next = this.sample.buffer[nextIndex]
       const level = current + (next - current) * (this.sampleIndex - index)
 
-      outputs[0][i] = level * leftGain
-      outputs[1][i] = level * rightGain
+      outputs[0][i] += level * leftGain
+      outputs[1][i] += level * rightGain
 
       this.sampleIndex = loopIndex ?? advancedIndex
 

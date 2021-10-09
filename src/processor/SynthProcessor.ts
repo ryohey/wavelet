@@ -5,7 +5,6 @@ import {
   SampleData,
   SynthEvent,
 } from "../SynthEvent"
-import { addBuffer } from "./bufferUtil"
 import { logger } from "./logger"
 import { SampleTable } from "./SampleTable"
 import { WavetableOscillator } from "./WavetableOscillator"
@@ -214,9 +213,6 @@ export class SynthProcessor extends AudioWorkletProcessor {
   }
 
   process(_inputs: Float32Array[][], outputs: Float32Array[][]) {
-    const bufferLeft = new Float32Array(outputs[0][0].length)
-    const bufferRight = new Float32Array(outputs[0][1].length)
-
     this.eventBuffer = this.eventBuffer.filter((e) => {
       if (e.receivedFrame + e.delayTime <= currentFrame) {
         this.handleDelayableEvent(e)
@@ -232,9 +228,7 @@ export class SynthProcessor extends AudioWorkletProcessor {
           oscillator.volume = state.volume * state.expression
           oscillator.pan = state.pan
           oscillator.modulation = state.modulation
-          oscillator.process([bufferLeft, bufferRight])
-          addBuffer(bufferLeft, outputs[0][0])
-          addBuffer(bufferRight, outputs[0][1])
+          oscillator.process([outputs[0][0], outputs[0][1]])
         }
 
         state.oscillators[key] = state.oscillators[key]?.filter(
