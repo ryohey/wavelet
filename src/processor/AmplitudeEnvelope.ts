@@ -17,7 +17,7 @@ enum EnvelopePhase {
 const forceStopReleaseTime = 0.1
 
 export class AmplitudeEnvelope {
-  private parameter: AmplitudeEnvelopeParameter
+  private readonly parameter: AmplitudeEnvelopeParameter
   private phase = EnvelopePhase.attack
   private lastAmplitude = 0
 
@@ -40,13 +40,14 @@ export class AmplitudeEnvelope {
     this.phase = EnvelopePhase.forceStop
   }
 
-  getAmplitude(): number {
+  getAmplitude(bufferSize: number): number {
     const { attackTime, decayTime, sustainLevel, releaseTime } = this.parameter
 
     // Attack
     switch (this.phase) {
       case EnvelopePhase.attack: {
-        const amplificationPerFrame = 1 / (attackTime * sampleRate)
+        const amplificationPerFrame =
+          (1 / (attackTime * sampleRate)) * bufferSize
         const value = this.lastAmplitude + amplificationPerFrame
         if (value >= 1) {
           this.phase = EnvelopePhase.decay
@@ -57,7 +58,7 @@ export class AmplitudeEnvelope {
         return value
       }
       case EnvelopePhase.decay: {
-        const attenuationPerFrame = 1 / (decayTime * sampleRate)
+        const attenuationPerFrame = (1 / (decayTime * sampleRate)) * bufferSize
         const value = this.lastAmplitude - attenuationPerFrame
         if (value <= sustainLevel) {
           if (sustainLevel <= 0) {
@@ -77,7 +78,8 @@ export class AmplitudeEnvelope {
         return sustainLevel
       }
       case EnvelopePhase.release: {
-        const attenuationPerFrame = 1 / (releaseTime * sampleRate)
+        const attenuationPerFrame =
+          (1 / (releaseTime * sampleRate)) * bufferSize
         const value = this.lastAmplitude - attenuationPerFrame
         if (value <= 0) {
           this.phase = EnvelopePhase.stopped
@@ -88,7 +90,8 @@ export class AmplitudeEnvelope {
         return value
       }
       case EnvelopePhase.forceStop: {
-        const attenuationPerFrame = 1 / (forceStopReleaseTime * sampleRate)
+        const attenuationPerFrame =
+          (1 / (forceStopReleaseTime * sampleRate)) * bufferSize
         const value = this.lastAmplitude - attenuationPerFrame
         if (value <= 0) {
           this.phase = EnvelopePhase.stopped

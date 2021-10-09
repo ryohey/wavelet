@@ -74,6 +74,13 @@ export class WavetableOscillator {
       4
     const leftPanVolume = Math.cos(panTheta)
     const rightPanVolume = Math.sin(panTheta)
+    const gain = this.envelope.getAmplitude(outputs[0].length)
+    const leftGain = gain * volume * leftPanVolume
+    const rightGain = gain * volume * rightPanVolume
+
+    const pitchLFOValue = this.pitchLFO.getValue(outputs[0].length)
+    const pitchModulation =
+      pitchLFOValue * this.modulation * (this.modulationDepthRange / 1200)
 
     for (let i = 0; i < outputs[0].length; ++i) {
       if (!this._isPlaying) {
@@ -82,12 +89,6 @@ export class WavetableOscillator {
         outputs[1][i] = 0
         continue
       }
-
-      const gain = this.envelope.getAmplitude()
-      const pitchModulation =
-        this.pitchLFO.getValue() *
-        this.modulation *
-        (this.modulationDepthRange / 1200)
 
       const index = Math.floor(this.sampleIndex)
       const advancedIndex = this.sampleIndex + speed * (1 + pitchModulation)
@@ -111,10 +112,9 @@ export class WavetableOscillator {
       const current = this.sample.buffer[index]
       const next = this.sample.buffer[nextIndex]
       const level = current + (next - current) * (this.sampleIndex - index)
-      const value = level * gain * volume
 
-      outputs[0][i] = value * leftPanVolume
-      outputs[1][i] = value * rightPanVolume
+      outputs[0][i] = level * leftGain
+      outputs[1][i] = level * rightGain
 
       this.sampleIndex = loopIndex ?? advancedIndex
 
