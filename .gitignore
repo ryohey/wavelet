@@ -39,9 +39,5 @@ pkg
 build
 dist
 
-public/js
 **/tsconfig.tsbuildinfo
 .rollup.cache
-
-public/midi-js-soundfonts-with-drums
-public/soundfonts

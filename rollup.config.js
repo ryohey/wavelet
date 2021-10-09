@@ -1,12 +1,9 @@
 import commonjs from "@rollup/plugin-commonjs"
 import { nodeResolve } from "@rollup/plugin-node-resolve"
 import rollupTypescript from "@rollup/plugin-typescript"
-import fs from "fs"
-import serve from "rollup-plugin-serve"
 
 const output = {
-  dir: "public/js/",
-  format: "iife",
+  dir: "dist",
   sourcemap: true,
 }
 
@@ -19,22 +16,18 @@ const plugins = [
 export default [
   {
     input: "src/index.ts",
-    output,
-    plugins: [
-      ...plugins,
-      serve({
-        contentBase: "public",
-        open: true,
-        https: {
-          key: fs.readFileSync("./cert/localhost+1-key.pem"),
-          cert: fs.readFileSync("./cert/localhost+1.pem"),
-        },
-      }),
-    ],
+    output: {
+      ...output,
+      format: "commonjs",
+    },
+    plugins,
   },
   {
     input: "src/processor/processor.ts",
-    output,
+    output: {
+      ...output,
+      format: "iife",
+    },
     plugins,
   },
 ]
