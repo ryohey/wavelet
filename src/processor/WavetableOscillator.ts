@@ -6,6 +6,8 @@ export class WavetableOscillator {
   readonly sample: SampleData<Float32Array>
   private sampleIndex = 0
   private _isPlaying = false
+  private _isNoteOff = false
+  private isHold = false
   private isLooping = false
   private baseSpeed = 1
   private readonly envelope: AmplitudeEnvelope
@@ -13,7 +15,7 @@ export class WavetableOscillator {
 
   speed = 1
   // 0 to 1
-  velocity = 1
+  private velocity = 1
   // 0 to 1
   volume = 1
 
@@ -25,13 +27,14 @@ export class WavetableOscillator {
   // -1 to 1
   pan = 0
 
-  constructor(sample: SampleData<Float32Array>, envelope: AmplitudeEnvelope) {
+  constructor(sample: SampleData<Float32Array>) {
     this.sample = sample
-    this.envelope = envelope
+    this.envelope = new AmplitudeEnvelope(sample.amplitudeEnvelope)
     this.pitchLFO = new LFO()
   }
 
-  noteOn(pitch: number) {
+  noteOn(pitch: number, velocity: number) {
+    this.velocity = velocity
     this._isPlaying = true
     this.isLooping = this.sample.loop !== null
     this.sampleIndex = this.sample.sampleStart
@@ -40,6 +43,20 @@ export class WavetableOscillator {
       ((pitch - this.sample.pitch) / 12) * this.sample.scaleTuning
     )
     this.pitchLFO.frequency = 5
+    this.envelope.noteOn()
+  }
+
+  noteOff() {
+    if (this.isHold) {
+      return
+    }
+
+    this.envelope.noteOff()
+    this._isNoteOff = true
+  }
+
+  forceStop() {
+    this.envelope.forceStop()
   }
 
   process(outputs: Float32Array[]) {
@@ -108,7 +125,23 @@ export class WavetableOscillator {
     }
   }
 
+  setHold(hold: boolean) {
+    this.isHold = hold
+
+    if (!hold && !this._isNoteOff) {
+      this.noteOff()
+    }
+  }
+
   get isPlaying() {
-    return this._isPlaying
+    return this._isPlaying && this.envelope.isPlaying
+  }
+
+  get isNoteOff() {
+    return this._isNoteOff
+  }
+
+  get exclusiveClass() {
+    return this.sample.exclusiveClass
   }
 }

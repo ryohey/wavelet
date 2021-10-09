@@ -7,8 +7,8 @@ import {
 } from "../SynthEvent"
 import { addBuffer } from "./bufferUtil"
 import { logger } from "./logger"
-import { NoteOscillator } from "./NoteOscillator"
 import { SampleTable } from "./SampleTable"
+import { WavetableOscillator } from "./WavetableOscillator"
 
 interface ChannelState {
   volume: number // 0 to 1
@@ -19,7 +19,7 @@ interface ChannelState {
   expression: number // 0 to 1
   pan: number // -1 to 1
   modulation: number
-  oscillators: { [key: number]: NoteOscillator[] }
+  oscillators: { [key: number]: WavetableOscillator[] }
 }
 
 const initialChannelState = (): ChannelState => ({
@@ -98,7 +98,7 @@ export class SynthProcessor extends AudioWorkletProcessor {
     }
 
     for (const sample of samples) {
-      const oscillator = new NoteOscillator(sample, sample.amplitudeEnvelope)
+      const oscillator = new WavetableOscillator(sample)
 
       const volume = velocity / 0x80
       oscillator.noteOn(pitch, volume)
