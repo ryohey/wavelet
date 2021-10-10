@@ -20,6 +20,6 @@
     "typescript": "^4.4.2"
   },
   "dependencies": {
-    "@ryohey/sf2synth": "github:ryohey/sf2synth.js#ccb4443"
+    "@ryohey/sf2parser": "^1.2.0"
   }
 }

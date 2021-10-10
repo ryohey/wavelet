@@ -1,5 +1,11 @@
-import { Parser } from "@ryohey/sf2synth"
-import { getPresetGenerators } from "@ryohey/sf2synth/bin/parser"
+import {
+  createGeneraterObject,
+  defaultInstrumentZone,
+  GeneratorParams,
+  getInstrumentGenerators,
+  getPresetGenerators,
+  parse,
+} from "@ryohey/sf2parser"
 import { SampleData } from "../SynthEvent"
 
 export type SoundFontSample = SampleData<ArrayBuffer> & {
@@ -9,14 +15,20 @@ export type SoundFontSample = SampleData<ArrayBuffer> & {
   velRange: [number, number]
 }
 
-export const loadSoundFontSamples = async function* (
-  url: string,
-  ctx: AudioContext,
-  onProgress: (progress: number) => void
-): AsyncGenerator<SoundFontSample> {
-  let progress = 0
-  const data = await (await fetch(url)).arrayBuffer()
-  const parsed = Parser.parse(new Uint8Array(data))
+export interface BufferCreator {
+  createBuffer(
+    numberOfChannels: number,
+    length: number,
+    sampleRate: number
+  ): AudioBuffer
+}
+
+export const getSamplesFromSoundFont = (
+  data: Uint8Array,
+  ctx: BufferCreator
+) => {
+  const parsed = parse(data)
+  const result: SoundFontSample[] = []
 
   for (let i = 0; i < parsed.presetHeaders.length; i++) {
     const presetHeader = parsed.presetHeaders[i]
@@ -25,13 +37,12 @@ export const loadSoundFontSamples = async function* (
     for (const lastPresetGenertor of presetGenerators.filter(
       (gen) => gen.type === "instrument"
     )) {
-      const presetZone = Parser.createGeneraterObject(presetGenerators)
+      const presetZone = createGeneraterObject(presetGenerators)
 
       const instrumentID = lastPresetGenertor.value as number
-      const instrumentZones = Parser.getInstrumentGenerators(
-        parsed,
-        instrumentID
-      ).map(Parser.createGeneraterObject)
+      const instrumentZones = getInstrumentGenerators(parsed, instrumentID).map(
+        createGeneraterObject
+      )
 
       // 最初のゾーンがsampleID を持たなければ global instrument zone
       let globalInstrumentZone: any | undefined
@@ -40,22 +51,20 @@ export const loadSoundFontSamples = async function* (
         globalInstrumentZone = instrumentZones[0]
       }
 
-      for await (const zone of instrumentZones.filter(
+      for (const zone of instrumentZones.filter(
         (zone) => zone.sampleID !== undefined
       )) {
         const sample = parsed.samples[zone.sampleID!]
         const sampleHeader = parsed.sampleHeaders[zone.sampleID!]
 
         const gen = {
-          ...Parser.defaultInstrumentZone,
+          ...defaultInstrumentZone,
           ...removeUndefined(globalInstrumentZone ?? {}),
           ...removeUndefined(zone),
         }
 
         // add presetGenerator value
-        for (const key of Object.keys(
-          gen
-        ) as (keyof Parser.GeneratorParams)[]) {
+        for (const key of Object.keys(gen) as (keyof GeneratorParams)[]) {
           if (
             key in presetZone &&
             typeof gen[key] === "number" &&
@@ -106,7 +115,7 @@ export const loadSoundFontSamples = async function* (
           releaseTime: timeCentToSec(gen.releaseVolEnv) / 4,
         }
 
-        yield {
+        result.push({
           buffer: audioData.buffer,
           pitch: -basePitch,
           name: sampleHeader.sampleName,
@@ -128,12 +137,12 @@ export const loadSoundFontSamples = async function* (
           scaleTuning: gen.scaleTuning / 100,
           pan: (gen.pan ?? 0) / 500,
           exclusiveClass: gen.exclusiveClass,
-        }
+        })
       }
     }
-
-    onProgress(progress++ / parsed.presetHeaders.length)
   }
+
+  return result
 }
 
 function convertTime(value: number) {

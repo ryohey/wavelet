@@ -1,4 +1,4 @@
-import { loadSoundFontSamples, SynthEvent } from "@ryohey/wavelet"
+import { getSamplesFromSoundFont, SynthEvent } from "@ryohey/wavelet"
 import { read } from "midifile-ts"
 import { midiMessageToSynthEvent } from "./midiMessageToSynthEvent"
 import { playMIDI } from "./playMIDI"
@@ -75,16 +75,11 @@ const main = async () => {
 
   const loadSoundFont = async () => {
     const url = "soundfonts/A320U.sf2"
-    for await (const sample of loadSoundFontSamples(
-      url,
-      context,
-      (progress) => {
-        const progressElm = document.getElementById(
-          "progress"
-        ) as HTMLProgressElement
-        progressElm.value = progress
-      }
-    )) {
+
+    const data = await (await fetch(url)).arrayBuffer()
+    const parsed = getSamplesFromSoundFont(new Uint8Array(data), context)
+
+    for (const sample of parsed) {
       postSynthMessage(
         {
           type: "loadSample",
@@ -96,18 +91,6 @@ const main = async () => {
         },
         [sample.buffer] // transfer instead of copy)
       )
-
-      if (false) {
-        for (
-          let pitch = sample.keyRange[0];
-          pitch <= sample.keyRange[1];
-          pitch++
-        ) {
-          loadStateCanvas.matrix[sample.instrument][pitch]++
-        }
-
-        loadStateCanvas.draw()
-      }
     }
   }
 
