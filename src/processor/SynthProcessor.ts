@@ -49,7 +49,7 @@ export class SynthProcessor extends AudioWorkletProcessor {
     this.port.onmessage = (e: MessageEvent<SynthEvent>) => {
       logger.log(e.data)
       switch (e.data.type) {
-        case "loadSample":
+        case "loadSample": {
           const {
             bank,
             instrument,
@@ -69,6 +69,11 @@ export class SynthProcessor extends AudioWorkletProcessor {
             velRange
           )
           break
+        }
+        case "clearScheduledEvents": {
+          this.eventBuffer = []
+          break
+        }
       }
       if ("delayTime" in e.data) {
         // handle in process

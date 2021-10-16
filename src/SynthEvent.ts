@@ -31,6 +31,10 @@ export interface LoadSampleEvent {
   velRange: [number, number]
 }
 
+export interface ClearScheduledEventsEvent {
+  type: "clearScheduledEvents"
+}
+
 interface DelayTime {
   delayTime: number
 }
@@ -132,6 +136,9 @@ export type DelayableEvent =
   | BankSelectEvent
   | ModulationEvent
 
-export type SynthEvent = LoadSampleEvent | DelayableEvent
+export type SynthEvent =
+  | LoadSampleEvent
+  | ClearScheduledEventsEvent
+  | DelayableEvent
 
 export const DrumInstrumentNumber = 128
