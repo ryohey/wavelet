@@ -1,6 +1,5 @@
 import { getSamplesFromSoundFont, SynthEvent } from "@ryohey/wavelet"
-import { read } from "midifile-ts"
-import { midiMessageToSynthEvent } from "./midiMessageToSynthEvent"
+import { deserialize, read, Stream } from "midifile-ts"
 import { playMIDI } from "./playMIDI"
 
 const main = async () => {
@@ -45,10 +44,6 @@ const main = async () => {
     }
   }
 
-  const channelInput = document.getElementById(
-    "channel-input"
-  ) as HTMLInputElement
-
   const setupMIDIInput = async () => {
     const midiAccess = await (navigator as any).requestMIDIAccess({
       sysex: false,
@@ -56,11 +51,8 @@ const main = async () => {
 
     midiAccess.inputs.forEach((entry: any) => {
       entry.onmidimessage = (event: any) => {
-        const channel = parseInt(channelInput.value)
-        const e = midiMessageToSynthEvent(event.data, channel)
-        if (e !== null) {
-          postSynthMessage(e)
-        }
+        const e = deserialize(new Stream(event.data), 0, () => {})
+        postSynthMessage({ type: "midi", midi: e, delayTime: 0 })
       }
     })
   }
@@ -94,26 +86,39 @@ const main = async () => {
     const channel = 0
 
     postSynthMessage({
-      type: "programChange",
-      value: 0,
-      channel,
+      type: "midi",
+      midi: {
+        type: "channel",
+        subtype: "programChange",
+        value: 0,
+        channel,
+      },
       delayTime: 0,
     })
 
     const step = context.sampleRate * 5
     let time = 0
-    for (let pitch = 12 * 3; pitch < 128; pitch++) {
+    for (let noteNumber = 12 * 3; noteNumber < 128; noteNumber++) {
       postSynthMessage({
-        type: "noteOn",
-        pitch,
-        velocity: 127,
-        channel,
+        type: "midi",
+        midi: {
+          type: "channel",
+          subtype: "noteOn",
+          noteNumber,
+          velocity: 127,
+          channel,
+        },
         delayTime: time * step,
       })
       postSynthMessage({
-        type: "noteOff",
-        pitch,
-        channel,
+        type: "midi",
+        midi: {
+          type: "channel",
+          subtype: "noteOff",
+          noteNumber,
+          velocity: 0,
+          channel,
+        },
         delayTime: (time + 1) * step,
       })
       time++
@@ -133,9 +138,13 @@ const main = async () => {
     programSelect.addEventListener("change", (e) => {
       const value = parseInt(programSelect.value)
       postSynthMessage({
-        type: "programChange",
-        value,
-        channel: 0,
+        type: "midi",
+        midi: {
+          type: "channel",
+          subtype: "programChange",
+          value,
+          channel: 0,
+        },
         delayTime: 0,
       })
     })

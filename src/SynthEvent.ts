@@ -1,4 +1,6 @@
+import { AnyEvent } from "midifile-ts"
 import { AmplitudeEnvelopeParameter } from "./processor/AmplitudeEnvelope"
+import { DistributiveOmit } from "./types"
 
 export interface SampleLoop {
   start: number
@@ -35,110 +37,15 @@ export interface ClearScheduledEventsEvent {
   type: "clearScheduledEvents"
 }
 
-interface DelayTime {
+export type MIDIEventBody = DistributiveOmit<AnyEvent, "deltaTime">
+
+export type MIDIEvent = {
+  type: "midi"
+  midi: MIDIEventBody
   delayTime: number
 }
 
-interface Channel {
-  channel: number
-}
-
-export type NoteOnEvent = DelayTime &
-  Channel & {
-    type: "noteOn"
-    velocity: number
-    pitch: number
-  }
-
-export type NoteOffEvent = DelayTime &
-  Channel & {
-    type: "noteOff"
-    pitch: number
-  }
-
-export type PitchBendEvent = DelayTime &
-  Channel & {
-    type: "pitchBend"
-    value: number
-  }
-
-export type VolumeEvent = DelayTime &
-  Channel & {
-    type: "volume"
-    value: number
-  }
-
-export type ProgramChangeEvent = DelayTime &
-  Channel & {
-    type: "programChange"
-    value: number
-  }
-
-export type PitchBendSensitivityEvent = DelayTime &
-  Channel & {
-    type: "pitchBendSensitivity"
-    value: number
-  }
-
-export type MainVolumeEvent = DelayTime &
-  Channel & {
-    type: "mainVolume"
-    value: number
-  }
-
-export type ExpressionEvent = DelayTime &
-  Channel & {
-    type: "expression"
-    value: number
-  }
-
-export type AllSoundsOffEvent = DelayTime &
-  Channel & {
-    type: "allSoundsOff"
-  }
-
-export type HoldEvent = DelayTime &
-  Channel & {
-    type: "hold"
-    value: number
-  }
-
-export type PanEvent = DelayTime &
-  Channel & {
-    type: "pan"
-    value: number
-  }
-
-export type BankSelectEvent = DelayTime &
-  Channel & {
-    type: "bankSelect"
-    value: number
-  }
-
-export type ModulationEvent = DelayTime &
-  Channel & {
-    type: "modulation"
-    value: number
-  }
-
-export type DelayableEvent =
-  | NoteOnEvent
-  | NoteOffEvent
-  | PitchBendEvent
-  | VolumeEvent
-  | ProgramChangeEvent
-  | PitchBendSensitivityEvent
-  | MainVolumeEvent
-  | ExpressionEvent
-  | AllSoundsOffEvent
-  | HoldEvent
-  | PanEvent
-  | BankSelectEvent
-  | ModulationEvent
-
-export type SynthEvent =
-  | LoadSampleEvent
-  | ClearScheduledEventsEvent
-  | DelayableEvent
+export type ImmediateEvent = LoadSampleEvent | ClearScheduledEventsEvent
+export type SynthEvent = ImmediateEvent | MIDIEvent
 
 export const DrumInstrumentNumber = 128

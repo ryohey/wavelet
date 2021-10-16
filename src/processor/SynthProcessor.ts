@@ -126,11 +126,6 @@ export class SynthProcessor extends AudioWorkletProcessor {
     state.pitchBend = (value / 0x2000 - 1) * state.pitchBendSensitivity
   }
 
-  setVolume(channel: number, value: number) {
-    const state = this.getChannelState(channel)
-    state.volume = value / 0x80
-  }
-
   programChange(channel: number, value: number) {
     const state = this.getChannelState(channel)
     state.instrument = value

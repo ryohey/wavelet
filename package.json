@@ -20,6 +20,7 @@
     "typescript": "^4.4.2"
   },
   "dependencies": {
-    "@ryohey/sf2parser": "^1.2.0"
+    "@ryohey/sf2parser": "^1.2.0",
+    "midifile-ts": "^1.3.1"
   }
 }
