@@ -178,9 +178,7 @@ export class SynthProcessor extends AudioWorkletProcessor {
 
         for (const key in state.oscillators) {
           for (const osc of state.oscillators[key]) {
-            if (!osc.isNoteOff) {
-              osc.noteOff()
-            }
+            osc.forceStop()
           }
         }
         break
