@@ -1,12 +1,7 @@
-import {
-  DelayableEvent,
-  NoteOffEvent,
-  NoteOnEvent,
-  SampleData,
-  SynthEvent,
-} from "../SynthEvent"
+import { SampleData, SynthEvent } from "../SynthEvent"
 import { logger } from "./logger"
 import { SampleTable } from "./SampleTable"
+import { SynthEventHandler } from "./SynthEventHandler"
 import { WavetableOscillator } from "./WavetableOscillator"
 
 interface ChannelState {
@@ -36,60 +31,47 @@ const initialChannelState = (): ChannelState => ({
 const RHYTHM_CHANNEL = 9
 const RHYTHM_BANK = 128
 
-type DelayedEvent = DelayableEvent & { receivedFrame: number }
 type Sample = SampleData<Float32Array>
 
 export class SynthProcessor extends AudioWorkletProcessor {
   private sampleTable = new SampleTable()
-  private eventBuffer: DelayedEvent[] = []
   private channels: { [key: number]: ChannelState } = {}
+  private eventHandler = new SynthEventHandler(this)
 
   constructor() {
     super()
+
     this.port.onmessage = (e: MessageEvent<SynthEvent>) => {
-      logger.log(e.data)
-      switch (e.data.type) {
-        case "loadSample": {
-          const {
-            bank,
-            instrument,
-            keyRange,
-            velRange,
-            sample: _sample,
-          } = e.data
-          const sample: Sample = {
-            ..._sample,
-            buffer: new Float32Array(_sample.buffer),
-          }
-          this.sampleTable.addSample(
-            sample,
-            bank,
-            instrument,
-            keyRange,
-            velRange
-          )
-          break
-        }
-        case "clearScheduledEvents": {
-          this.eventBuffer = []
-          break
-        }
-      }
-      if ("delayTime" in e.data) {
-        // handle in process
-        this.eventBuffer.push({ ...e.data, receivedFrame: currentFrame })
-      }
+      this.eventHandler.addEvent(e.data)
     }
   }
 
-  getSamples(channel: number, pitch: number, velocity: number): Sample[] {
+  private getSamples(
+    channel: number,
+    pitch: number,
+    velocity: number
+  ): Sample[] {
     const state = this.getChannelState(channel)
     // Play drums for CH.10
     const bank = channel === RHYTHM_CHANNEL ? RHYTHM_BANK : state.bank
     return this.sampleTable.getSamples(bank, state.instrument, pitch, velocity)
   }
 
-  private noteOn({ pitch, velocity, channel }: NoteOnEvent) {
+  loadSample(
+    sample: SampleData<ArrayBuffer>,
+    bank: number,
+    instrument: number,
+    keyRange: [number, number],
+    velRange: [number, number]
+  ) {
+    const _sample: Sample = {
+      ...sample,
+      buffer: new Float32Array(sample.buffer),
+    }
+    this.sampleTable.addSample(_sample, bank, instrument, keyRange, velRange)
+  }
+
+  noteOn(channel: number, pitch: number, velocity: number) {
     const state = this.getChannelState(channel)
 
     const samples = this.getSamples(channel, pitch, velocity)
@@ -125,7 +107,7 @@ export class SynthProcessor extends AudioWorkletProcessor {
     }
   }
 
-  private noteOff({ pitch, channel }: NoteOffEvent) {
+  noteOff(channel: number, pitch: number) {
     const state = this.getChannelState(channel)
 
     if (state.oscillators[pitch] === undefined) {
@@ -139,82 +121,70 @@ export class SynthProcessor extends AudioWorkletProcessor {
     }
   }
 
-  handleDelayableEvent(e: DelayableEvent) {
-    logger.log("handle delayable event", e)
-    switch (e.type) {
-      case "noteOn":
-        this.noteOn(e)
-        break
-      case "noteOff":
-        this.noteOff(e)
-        break
-      case "pitchBend": {
-        const state = this.getChannelState(e.channel)
-        state.pitchBend = (e.value / 0x2000 - 1) * state.pitchBendSensitivity
-        break
-      }
-      case "volume": {
-        const state = this.getChannelState(e.channel)
-        state.volume = e.value / 0x80
-        break
-      }
-      case "programChange": {
-        const state = this.getChannelState(e.channel)
-        state.instrument = e.value
-        break
-      }
-      case "pitchBendSensitivity": {
-        const state = this.getChannelState(e.channel)
-        state.pitchBendSensitivity = e.value
-        break
-      }
-      case "mainVolume": {
-        const state = this.getChannelState(e.channel)
-        state.volume = e.value / 0x80
-        break
-      }
-      case "expression": {
-        const state = this.getChannelState(e.channel)
-        state.expression = e.value / 0x80
-        break
-      }
-      case "allSoundsOff": {
-        const state = this.getChannelState(e.channel)
+  pitchBend(channel: number, value: number) {
+    const state = this.getChannelState(channel)
+    state.pitchBend = (value / 0x2000 - 1) * state.pitchBendSensitivity
+  }
 
-        for (const key in state.oscillators) {
-          for (const osc of state.oscillators[key]) {
-            osc.forceStop()
-          }
-        }
-        break
-      }
-      case "hold": {
-        const hold = e.value >= 64
-        const state = this.getChannelState(e.channel)
+  setVolume(channel: number, value: number) {
+    const state = this.getChannelState(channel)
+    state.volume = value / 0x80
+  }
 
-        for (const key in state.oscillators) {
-          for (const osc of state.oscillators[key]) {
-            osc.setHold(hold)
-          }
-        }
-        break
-      }
-      case "pan": {
-        const state = this.getChannelState(e.channel)
-        state.pan = (e.value / 127 - 0.5) * 2
-        break
-      }
-      case "bankSelect": {
-        const state = this.getChannelState(e.channel)
-        state.bank = e.value
-        break
-      }
-      case "modulation": {
-        const state = this.getChannelState(e.channel)
-        state.modulation = e.value / 0x80
-        break
+  programChange(channel: number, value: number) {
+    const state = this.getChannelState(channel)
+    state.instrument = value
+  }
+
+  setPitchBendSensitivity(channel: number, value: number) {
+    const state = this.getChannelState(channel)
+    state.pitchBendSensitivity = value
+  }
+
+  setMainVolume(channel: number, value: number) {
+    const state = this.getChannelState(channel)
+    state.volume = value / 0x80
+  }
+
+  expression(channel: number, value: number) {
+    const state = this.getChannelState(channel)
+    state.expression = value / 0x80
+  }
+
+  allSoundsOff(channel: number) {
+    const state = this.getChannelState(channel)
+
+    for (const key in state.oscillators) {
+      for (const osc of state.oscillators[key]) {
+        osc.forceStop()
       }
     }
+  }
+
+  hold(channel: number, value: number) {
+    const hold = value >= 64
+    const state = this.getChannelState(channel)
+
+    for (const key in state.oscillators) {
+      for (const osc of state.oscillators[key]) {
+        osc.setHold(hold)
+      }
+    }
+  }
+
+  setPan(channel: number, value: number) {
+    const state = this.getChannelState(channel)
+    state.pan = (value / 127 - 0.5) * 2
+  }
+
+  bankSelect(channel: number, value: number) {
+    const state = this.getChannelState(channel)
+    state.bank = value
+  }
+
+  modulation(channel: number, value: number) {
+    const state = this.getChannelState(channel)
+    state.modulation = value / 0x80
   }
 
   private getChannelState(channel: number): ChannelState {
@@ -228,13 +198,7 @@ export class SynthProcessor extends AudioWorkletProcessor {
   }
 
   process(_inputs: Float32Array[][], outputs: Float32Array[][]) {
-    this.eventBuffer = this.eventBuffer.filter((e) => {
-      if (e.receivedFrame + e.delayTime <= currentFrame) {
-        this.handleDelayableEvent(e)
-        return false
-      }
-      return true
-    })
+    this.eventHandler.processScheduledEvents()
 
     for (const channel in this.channels) {
       const state = this.channels[channel]
