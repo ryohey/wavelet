@@ -77,11 +77,11 @@ const main = async () => {
   document.getElementById("open")?.addEventListener("change", (e) => {
     context.resume()
     const reader = new FileReader()
-    reader.onload = () => {
+    reader.onload = async () => {
       const midi = read(reader.result as ArrayBuffer)
-      playMIDI(midi, context.sampleRate, (e: SynthEvent) => {
+      for await (const e of playMIDI(midi, context.sampleRate)) {
         postSynthMessage(e)
-      })
+      }
     }
     const input = e.currentTarget as HTMLInputElement
     const file = input.files?.[0]

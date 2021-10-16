@@ -29,52 +29,47 @@ interface RPN {
   dataLSB?: ControllerEvent
 }
 
-export const playMIDI = async (
-  midi: MidiFile,
-  sampleRate: number,
-  postMessage: (e: SynthEvent) => void
-) => {
+export async function* playMIDI(midi: MidiFile, sampleRate: number) {
   let rpnEvents: { [channel: number]: RPN | undefined } = {}
   let tempo = 120
   let bankSelectMSB: { [channel: number]: number | undefined } = {}
 
-  const handleEvent = (e: AnyEvent & Tick, delayTime: number) => {
+  const handleEvent = (
+    e: AnyEvent & Tick,
+    delayTime: number
+  ): SynthEvent | null => {
     switch (e.type) {
       case "channel":
         switch (e.subtype) {
           case "noteOn":
-            postMessage({
+            return {
               type: "noteOn",
               pitch: e.noteNumber,
               velocity: e.velocity,
               channel: e.channel,
               delayTime,
-            })
-            break
+            }
           case "noteOff":
-            postMessage({
+            return {
               type: "noteOff",
               pitch: e.noteNumber,
               channel: e.channel,
               delayTime,
-            })
-            break
+            }
           case "programChange":
-            postMessage({
+            return {
               type: "programChange",
               channel: e.channel,
               value: e.value,
               delayTime,
-            })
-            break
+            }
           case "pitchBend":
-            postMessage({
+            return {
               type: "pitchBend",
               channel: e.channel,
               value: e.value,
               delayTime,
-            })
-            break
+            }
           case "controller": {
             switch (e.controllerType) {
               case MIDIControlEvents.NONREG_PARM_NUM_MSB:
@@ -114,12 +109,12 @@ export const playMIDI = async (
                 // In case of pitch bend sensitivity,
                 // send without waiting for Data LSB event
                 if (rpn.rpnLSB?.value === 0) {
-                  postMessage({
+                  return {
                     type: "pitchBendSensitivity",
                     channel: e.channel,
                     value: rpn.dataMSB.value,
                     delayTime,
-                  })
+                  }
                 }
                 break
               }
@@ -132,44 +127,39 @@ export const playMIDI = async (
                 break
               }
               case MIDIControlEvents.MSB_MAIN_VOLUME:
-                postMessage({
+                return {
                   type: "mainVolume",
                   channel: e.channel,
                   value: e.value,
                   delayTime,
-                })
-                break
+                }
               case MIDIControlEvents.MSB_PAN:
-                postMessage({
+                return {
                   type: "pan",
                   channel: e.channel,
                   value: e.value,
                   delayTime,
-                })
-                break
+                }
               case MIDIControlEvents.MSB_EXPRESSION:
-                postMessage({
+                return {
                   type: "expression",
                   channel: e.channel,
                   value: e.value,
                   delayTime,
-                })
-                break
+                }
               case MIDIControlEvents.ALL_SOUNDS_OFF:
-                postMessage({
+                return {
                   type: "allSoundsOff",
                   channel: e.channel,
                   delayTime,
-                })
-                break
+                }
               case MIDIControlEvents.SUSTAIN:
-                postMessage({
+                return {
                   type: "hold",
                   channel: e.channel,
                   value: e.value,
                   delayTime,
-                })
-                break
+                }
               case MIDIControlEvents.MSB_BANK:
                 bankSelectMSB[e.channel] = e.value
                 break
@@ -177,23 +167,22 @@ export const playMIDI = async (
                 const msb = bankSelectMSB[e.channel]
                 if (msb !== undefined) {
                   const bank = (msb << 7) + e.value
-                  postMessage({
+                  return {
                     type: "bankSelect",
                     channel: e.channel,
                     value: bank,
                     delayTime,
-                  })
+                  }
                 }
                 break
               }
               case MIDIControlEvents.MSB_MODWHEEL:
-                postMessage({
+                return {
                   type: "modulation",
                   channel: e.channel,
                   value: e.value,
                   delayTime,
-                })
-                break
+                }
               default:
                 console.warn(`not supported controller event`, e)
                 break
@@ -215,6 +204,7 @@ export const playMIDI = async (
             break
         }
     }
+    return null
   }
 
   const tickedEvents = midi.tracks
@@ -251,6 +241,9 @@ export const playMIDI = async (
     }
 
     const delayTime = (timeInSec - waitTime) * sampleRate
-    handleEvent(e, delayTime)
+    const synthEvent = handleEvent(e, delayTime)
+    if (synthEvent !== null) {
+      yield synthEvent
+    }
   }
 }
