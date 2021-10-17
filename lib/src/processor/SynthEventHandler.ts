@@ -61,8 +61,9 @@ export class SynthEventHandler {
           e.velRange
         )
         break
-      case "clearScheduledEvents":
+      case "stop":
         this.scheduledEvents = []
+        this.processor.stop()
         break
     }
   }
