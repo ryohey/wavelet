@@ -1,26 +1,22 @@
 {
-  "name": "@ryohey/wavelet",
-  "version": "0.1.0",
-  "description": "A wavetable synthesizer that never stops the UI thread created by AudioWorklet.",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "name": "workspace",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "private": true,
   "scripts": {
-    "start": "rollup --config --watch",
-    "build": "rollup --config"
+    "start": "concurrently \"npm run start:lib\" \"npm run start:example\"",
+    "start:lib": "npm start --workspace=lib",
+    "start:example": "npm start --workspace=example",
+    "build": "npm run build --workspace=lib"
   },
-  "author": "ryohey",
+  "author": "",
   "license": "MIT",
+  "workspaces": [
+    "lib",
+    "example"
+  ],
   "devDependencies": {
-    "@rollup/plugin-commonjs": "^20.0.0",
-    "@rollup/plugin-node-resolve": "^13.0.4",
-    "@rollup/plugin-typescript": "^8.2.5",
-    "@types/audioworklet": "0.0.19",
-    "rollup": "^2.56.3",
-    "tslib": "^2.3.1",
-    "typescript": "^4.4.2"
-  },
-  "dependencies": {
-    "@ryohey/sf2parser": "^1.2.0",
-    "midifile-ts": "^1.3.1"
+    "concurrently": "^6.3.0"
   }
 }
