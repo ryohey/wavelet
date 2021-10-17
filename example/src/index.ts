@@ -1,6 +1,6 @@
 import { getSamplesFromSoundFont, SynthEvent } from "@ryohey/wavelet"
 import { deserialize, read, Stream } from "midifile-ts"
-import { playMIDI } from "./playMIDI"
+import { MIDIPlayer } from "./MIDIPlayer"
 
 const main = async () => {
   const context = new AudioContext()
@@ -62,93 +62,32 @@ const main = async () => {
   loadSoundFont().catch((e) => console.error(e))
   setupMIDIInput().catch((e) => console.error(e))
 
-  document.getElementById("button-resume")?.addEventListener("click", () => {
-    context.resume()
-  })
+  const fileInput = document.getElementById("open")!
+  const playButton = document.getElementById("button-play")!
+  const pauseButton = document.getElementById("button-pause")!
 
-  document.getElementById("open")?.addEventListener("change", (e) => {
+  let midiPlayer: MIDIPlayer | null = null
+
+  fileInput.addEventListener("change", (e) => {
     context.resume()
     const reader = new FileReader()
     reader.onload = async () => {
       const midi = read(reader.result as ArrayBuffer)
-      for await (const e of playMIDI(midi, context.sampleRate)) {
-        postSynthMessage(e)
-      }
+      midiPlayer = new MIDIPlayer(midi, context.sampleRate, postSynthMessage)
     }
     const input = e.currentTarget as HTMLInputElement
     const file = input.files?.[0]
     reader.readAsArrayBuffer(file!)
   })
 
-  document.getElementById("button-test")?.addEventListener("click", () => {
+  playButton.addEventListener("click", () => {
     context.resume()
-
-    const channel = 0
-
-    postSynthMessage({
-      type: "midi",
-      midi: {
-        type: "channel",
-        subtype: "programChange",
-        value: 0,
-        channel,
-      },
-      delayTime: 0,
-    })
-
-    const step = context.sampleRate * 5
-    let time = 0
-    for (let noteNumber = 12 * 3; noteNumber < 128; noteNumber++) {
-      postSynthMessage({
-        type: "midi",
-        midi: {
-          type: "channel",
-          subtype: "noteOn",
-          noteNumber,
-          velocity: 127,
-          channel,
-        },
-        delayTime: time * step,
-      })
-      postSynthMessage({
-        type: "midi",
-        midi: {
-          type: "channel",
-          subtype: "noteOff",
-          noteNumber,
-          velocity: 0,
-          channel,
-        },
-        delayTime: (time + 1) * step,
-      })
-      time++
-    }
+    midiPlayer?.resume()
   })
 
-  {
-    const programSelect = document.getElementById(
-      "program-select"
-    ) as HTMLSelectElement
-    for (let i = 0; i < 128; i++) {
-      const option = document.createElement("option")
-      option.value = i.toString()
-      option.text = i.toString()
-      programSelect.appendChild(option)
-    }
-    programSelect.addEventListener("change", (e) => {
-      const value = parseInt(programSelect.value)
-      postSynthMessage({
-        type: "midi",
-        midi: {
-          type: "channel",
-          subtype: "programChange",
-          value,
-          channel: 0,
-        },
-        delayTime: 0,
-      })
-    })
-  }
+  pauseButton.addEventListener("click", () => {
+    midiPlayer?.pause()
+  })
 }
 
 main().catch((e) => {
