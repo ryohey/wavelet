@@ -1,5 +1,5 @@
 import { getSamplesFromSoundFont, SynthEvent } from "@ryohey/wavelet"
-import { deserialize, read, Stream } from "midifile-ts"
+import { deserialize, MidiFile, read, Stream } from "midifile-ts"
 import { MIDIPlayer } from "./MIDIPlayer"
 
 const main = async () => {
@@ -81,17 +81,24 @@ const main = async () => {
 
   let midiPlayer: MIDIPlayer | null = null
 
+  const playMIDI = (midi: MidiFile) => {
+    midiPlayer?.pause()
+    context.resume()
+    midiPlayer = new MIDIPlayer(midi, context.sampleRate, postSynthMessage)
+    midiPlayer.onProgress = (progress) => {
+      if (!isSeekbarDragging) {
+        seekbar.valueAsNumber = progress
+      }
+    }
+    midiPlayer?.resume()
+  }
+
   fileInput.addEventListener("change", (e) => {
     context.resume()
     const reader = new FileReader()
     reader.onload = async () => {
       const midi = read(reader.result as ArrayBuffer)
-      midiPlayer = new MIDIPlayer(midi, context.sampleRate, postSynthMessage)
-      midiPlayer.onProgress = (progress) => {
-        if (!isSeekbarDragging) {
-          seekbar.valueAsNumber = progress
-        }
-      }
+      playMIDI(midi)
     }
     const input = e.currentTarget as HTMLInputElement
     const file = input.files?.[0]
