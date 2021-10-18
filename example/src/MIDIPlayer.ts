@@ -1,5 +1,5 @@
 import { SynthEvent } from "@ryohey/wavelet"
-import { AnyEvent, MidiFile } from "midifile-ts"
+import { AnyEvent, EndOfTrackEvent, MidiFile } from "midifile-ts"
 import EventScheduler from "./EventScheduler"
 
 interface Tick {
@@ -15,6 +15,9 @@ function addTick(events: AnyEvent[], track: number): (AnyEvent & Tick)[] {
   })
 }
 
+export const isEndOfTrackEvent = (e: AnyEvent): e is EndOfTrackEvent =>
+  "subtype" in e && e.subtype === "endOfTrack"
+
 const TIMER_INTERVAL = 100
 const LOOK_AHEAD_TIME = 50
 
@@ -25,7 +28,9 @@ export class MIDIPlayer {
   private midi: MidiFile
   private sampleRate: number
   private tickedEvents: (AnyEvent & Tick)[]
-  private scheduler: EventScheduler<AnyEvent & Tick> | null = null
+  private scheduler: EventScheduler<AnyEvent & Tick>
+  private endOfSong: number
+  onProgress?: (progress: number) => void
 
   constructor(
     midi: MidiFile,
@@ -44,6 +49,9 @@ export class MIDIPlayer {
       this.midi.header.ticksPerBeat,
       TIMER_INTERVAL + LOOK_AHEAD_TIME
     )
+    this.endOfSong = Math.max(
+      ...this.tickedEvents.filter(isEndOfTrackEvent).map((e) => e.tick)
+    )
   }
 
   resume() {
@@ -58,11 +66,13 @@ export class MIDIPlayer {
     this.output({ type: "stop" })
   }
 
-  private onTimer() {
-    if (this.scheduler === null) {
-      return
-    }
+  // 0: start, 1: end
+  seek(position: number) {
+    this.output({ type: "stop" })
+    this.scheduler.seek(position * this.endOfSong)
+  }
 
+  private onTimer() {
     const now = performance.now()
     const events = this.scheduler.readNextEvents(this.tempo, now)
 
@@ -75,6 +85,13 @@ export class MIDIPlayer {
         this.output(synthEvent)
       }
     })
+
+    if (this.scheduler.currentTick >= this.endOfSong) {
+      clearInterval(this.interval)
+      this.interval = undefined
+    }
+
+    this.onProgress?.(this.scheduler.currentTick / this.endOfSong)
   }
 
   private handleEvent(

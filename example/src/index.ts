@@ -65,6 +65,19 @@ const main = async () => {
   const fileInput = document.getElementById("open")!
   const playButton = document.getElementById("button-play")!
   const pauseButton = document.getElementById("button-pause")!
+  const seekbar = document.getElementById("seekbar")! as HTMLInputElement
+  seekbar.setAttribute("max", "1")
+  seekbar.setAttribute("step", "0.0001")
+  seekbar.addEventListener("change", (e) => {
+    midiPlayer?.seek(seekbar.valueAsNumber)
+  })
+  let isSeekbarDragging = false
+  seekbar.addEventListener("mousedown", () => {
+    isSeekbarDragging = true
+  })
+  seekbar.addEventListener("mouseup", () => {
+    isSeekbarDragging = false
+  })
 
   let midiPlayer: MIDIPlayer | null = null
 
@@ -74,6 +87,11 @@ const main = async () => {
     reader.onload = async () => {
       const midi = read(reader.result as ArrayBuffer)
       midiPlayer = new MIDIPlayer(midi, context.sampleRate, postSynthMessage)
+      midiPlayer.onProgress = (progress) => {
+        if (!isSeekbarDragging) {
+          seekbar.valueAsNumber = progress
+        }
+      }
     }
     const input = e.currentTarget as HTMLInputElement
     const file = input.files?.[0]
