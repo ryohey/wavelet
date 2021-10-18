@@ -137,6 +137,7 @@ export const getSamplesFromSoundFont = (
           scaleTuning: gen.scaleTuning / 100,
           pan: (gen.pan ?? 0) / 500,
           exclusiveClass: gen.exclusiveClass,
+          volume: 1 - gen.initialAttenuation / 1000,
         })
       }
     }

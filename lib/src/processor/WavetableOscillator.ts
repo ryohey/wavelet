@@ -66,7 +66,7 @@ export class WavetableOscillator {
 
     const speed =
       (this.baseSpeed * this.speed * this.sample.sampleRate) / sampleRate
-    const volume = this.velocity * this.volume
+    const volume = this.velocity * this.volume * this.sample.volume
 
     // zero to pi/2
     const panTheta =

@@ -22,6 +22,7 @@ export interface SampleData<BufferType> {
   scaleTuning: number
   pan: number
   exclusiveClass?: number | undefined
+  volume: number // 0 to 1
 }
 
 export interface LoadSampleEvent {
