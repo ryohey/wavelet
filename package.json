@@ -8,7 +8,8 @@
     "start": "concurrently \"npm run start:lib\" \"npm run start:example\"",
     "start:lib": "npm start --workspace=lib",
     "start:example": "npm start --workspace=example",
-    "build": "npm run build --workspace=lib"
+    "build": "npm run build --workspace=lib",
+    "publish": "npm publish --workspace=lib"
   },
   "author": "",
   "license": "MIT",
