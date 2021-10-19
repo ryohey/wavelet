@@ -182,16 +182,6 @@ export class SynthProcessor extends AudioWorkletProcessor {
     state.modulation = value / 0x80
   }
 
-  stop() {
-    for (const state of Object.values(this.channels)) {
-      for (const key in state.oscillators) {
-        for (const osc of state.oscillators[key]) {
-          osc.forceStop()
-        }
-      }
-    }
-  }
-
   private getChannelState(channel: number): ChannelState {
     const state = this.channels[channel]
     if (state !== undefined) {

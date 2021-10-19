@@ -34,19 +34,19 @@ export class SynthEventHandler {
 
     if ("delayTime" in e) {
       // handle in process
-      this.scheduledEvents.push({ ...e, receivedFrame: currentFrame })
+      this.scheduledEvents.unshift({ ...e, receivedFrame: currentFrame })
     } else {
       this.handleImmediateEvent(e)
     }
   }
 
   processScheduledEvents() {
-    this.scheduledEvents = this.scheduledEvents.filter((e) => {
+    arrayRemove(this.scheduledEvents, (e) => {
       if (e.receivedFrame + e.delayTime <= currentFrame) {
         this.handleDelayableEvent(e.midi)
-        return false
+        return true
       }
-      return true
+      return false
     })
   }
 
@@ -60,10 +60,6 @@ export class SynthEventHandler {
           e.keyRange,
           e.velRange
         )
-        break
-      case "stop":
-        this.scheduledEvents = []
-        this.processor.stop()
         break
     }
   }
@@ -147,6 +143,7 @@ export class SynthEventHandler {
                 this.processor.expression(e.channel, e.value)
                 break
               case MIDIControlEvents.ALL_SOUNDS_OFF:
+                this.removeScheduledEvents(e.channel)
                 this.processor.allSoundsOff(e.channel)
                 break
               case MIDIControlEvents.SUSTAIN:
@@ -175,6 +172,19 @@ export class SynthEventHandler {
         }
         break
       }
+    }
+  }
+
+  private removeScheduledEvents(channel: number) {
+    arrayRemove(this.scheduledEvents, (e) => e.midi.channel === channel)
+  }
+}
+
+function arrayRemove<T>(arr: T[], test: (e: T) => boolean) {
+  for (let i = arr.length - 1; i >= 0; i--) {
+    const ev = arr[i]
+    if (test(ev)) {
+      arr.splice(i, 1)
     }
   }
 }

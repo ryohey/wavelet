@@ -1,5 +1,10 @@
 import { SynthEvent } from "@ryohey/wavelet"
-import { AnyEvent, EndOfTrackEvent, MidiFile } from "midifile-ts"
+import {
+  AnyEvent,
+  EndOfTrackEvent,
+  MIDIControlEvents,
+  MidiFile,
+} from "midifile-ts"
 import EventScheduler from "./EventScheduler"
 
 interface Tick {
@@ -63,13 +68,29 @@ export class MIDIPlayer {
   pause() {
     clearInterval(this.interval)
     this.interval = undefined
-    this.output({ type: "stop" })
+    this.allSoundsOff()
   }
 
   // 0: start, 1: end
   seek(position: number) {
-    this.output({ type: "stop" })
+    this.allSoundsOff()
     this.scheduler.seek(position * this.endOfSong)
+  }
+
+  private allSoundsOff() {
+    for (let i = 0; i < 16; i++) {
+      this.output({
+        type: "midi",
+        midi: {
+          type: "channel",
+          subtype: "controller",
+          controllerType: MIDIControlEvents.ALL_SOUNDS_OFF,
+          channel: i,
+          value: 0,
+        },
+        delayTime: 0,
+      })
+    }
   }
 
   private onTimer() {

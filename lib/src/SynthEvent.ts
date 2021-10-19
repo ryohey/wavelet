@@ -34,10 +34,6 @@ export interface LoadSampleEvent {
   velRange: [number, number]
 }
 
-export interface StopEvent {
-  type: "stop"
-}
-
 export type MIDIEventBody = DistributiveOmit<AnyChannelEvent, "deltaTime">
 
 export type MIDIEvent = {
@@ -46,7 +42,7 @@ export type MIDIEvent = {
   delayTime: number
 }
 
-export type ImmediateEvent = LoadSampleEvent | StopEvent
+export type ImmediateEvent = LoadSampleEvent
 export type SynthEvent = ImmediateEvent | MIDIEvent
 
 export const DrumInstrumentNumber = 128
