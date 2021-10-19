@@ -9,7 +9,7 @@ import { DistributiveOmit } from "../types"
 import { logger } from "./logger"
 import { SynthProcessor } from "./SynthProcessor"
 
-type DelayedEvent = MIDIEvent & { receivedFrame: number }
+type DelayedEvent = MIDIEvent & { receivedFrame: number; isProcessed: boolean }
 type RPNControllerEvent = DistributiveOmit<ControllerEvent, "deltaTime">
 
 interface RPN {
@@ -34,20 +34,24 @@ export class SynthEventHandler {
 
     if ("delayTime" in e) {
       // handle in process
-      this.scheduledEvents.unshift({ ...e, receivedFrame: currentFrame })
+      this.scheduledEvents.push({
+        ...e,
+        receivedFrame: currentFrame,
+        isProcessed: false,
+      })
     } else {
       this.handleImmediateEvent(e)
     }
   }
 
   processScheduledEvents() {
-    arrayRemove(this.scheduledEvents, (e) => {
-      if (e.receivedFrame + e.delayTime <= currentFrame) {
+    for (const e of this.scheduledEvents) {
+      if (!e.isProcessed && e.receivedFrame + e.delayTime <= currentFrame) {
         this.handleDelayableEvent(e.midi)
-        return true
+        e.isProcessed = true
       }
-      return false
-    })
+    }
+    arrayRemove(this.scheduledEvents, (e) => e.isProcessed)
   }
 
   handleImmediateEvent(e: ImmediateEvent) {
@@ -176,7 +180,11 @@ export class SynthEventHandler {
   }
 
   private removeScheduledEvents(channel: number) {
-    arrayRemove(this.scheduledEvents, (e) => e.midi.channel === channel)
+    for (const e of this.scheduledEvents) {
+      if (e.midi.channel === channel) {
+        e.isProcessed = true
+      }
+    }
   }
 }
 
