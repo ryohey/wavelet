@@ -52,7 +52,9 @@ const main = async () => {
     midiAccess.inputs.forEach((entry: any) => {
       entry.onmidimessage = (event: any) => {
         const e = deserialize(new Stream(event.data), 0, () => {})
-        postSynthMessage({ type: "midi", midi: e, delayTime: 0 })
+        if ("channel" in e) {
+          postSynthMessage({ type: "midi", midi: e, delayTime: 0 })
+        }
       }
     })
   }

@@ -1,4 +1,4 @@
-import { AnyEvent } from "midifile-ts"
+import { AnyChannelEvent } from "midifile-ts"
 import { AmplitudeEnvelopeParameter } from "./processor/AmplitudeEnvelope"
 import { DistributiveOmit } from "./types"
 
@@ -38,7 +38,7 @@ export interface StopEvent {
   type: "stop"
 }
 
-export type MIDIEventBody = DistributiveOmit<AnyEvent, "deltaTime">
+export type MIDIEventBody = DistributiveOmit<AnyChannelEvent, "deltaTime">
 
 export type MIDIEvent = {
   type: "midi"
