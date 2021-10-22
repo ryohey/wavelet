@@ -170,6 +170,9 @@ export class SynthEventHandler {
                 }
                 break
               }
+              case MIDIControlEvents.RESET_CONTROLLERS:
+                this.processor.resetChannel(e.channel)
+                break
             }
             break
           }

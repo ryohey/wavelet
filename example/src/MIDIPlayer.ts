@@ -57,6 +57,7 @@ export class MIDIPlayer {
     this.endOfSong = Math.max(
       ...this.tickedEvents.filter(isEndOfTrackEvent).map((e) => e.tick)
     )
+    this.resetControllers()
   }
 
   resume() {
@@ -85,6 +86,22 @@ export class MIDIPlayer {
           type: "channel",
           subtype: "controller",
           controllerType: MIDIControlEvents.ALL_SOUNDS_OFF,
+          channel: i,
+          value: 0,
+        },
+        delayTime: 0,
+      })
+    }
+  }
+
+  private resetControllers() {
+    for (let i = 0; i < 16; i++) {
+      this.output({
+        type: "midi",
+        midi: {
+          type: "channel",
+          subtype: "controller",
+          controllerType: MIDIControlEvents.RESET_CONTROLLERS,
           channel: i,
           value: 0,
         },

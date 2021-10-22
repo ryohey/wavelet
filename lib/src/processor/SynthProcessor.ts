@@ -182,6 +182,10 @@ export class SynthProcessor extends AudioWorkletProcessor {
     state.modulation = value / 0x80
   }
 
+  resetChannel(channel: number) {
+    delete this.channels[channel]
+  }
+
   private getChannelState(channel: number): ChannelState {
     const state = this.channels[channel]
     if (state !== undefined) {
