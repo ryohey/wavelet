@@ -12,7 +12,7 @@
   "private": true,
   "dependencies": {
     "@barusu/rollup-plugin-copy": "^0.0.47",
-    "midifile-ts": "^1.3.1"
+    "midifile-ts": "^1.4.0"
   },
   "devDependencies": {
     "@rollup/plugin-node-resolve": "^13.0.5",
