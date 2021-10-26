@@ -8,10 +8,9 @@ export class WavetableOscillator {
   private _isPlaying = false
   private _isNoteOff = false
   private isHold = false
-  private isLooping = false
   private baseSpeed = 1
   private readonly envelope: AmplitudeEnvelope
-  private readonly pitchLFO: LFO
+  private readonly pitchLFO = new LFO()
 
   speed = 1
   // 0 to 1
@@ -30,13 +29,11 @@ export class WavetableOscillator {
   constructor(sample: SampleData<Float32Array>) {
     this.sample = sample
     this.envelope = new AmplitudeEnvelope(sample.amplitudeEnvelope)
-    this.pitchLFO = new LFO()
   }
 
   noteOn(pitch: number, velocity: number) {
     this.velocity = velocity
     this._isPlaying = true
-    this.isLooping = this.sample.loop !== null
     this.sampleIndex = this.sample.sampleStart
     this.baseSpeed = Math.pow(
       2,
@@ -87,11 +84,7 @@ export class WavetableOscillator {
       const advancedIndex = this.sampleIndex + speed * (1 + pitchModulation)
       let loopIndex: number | null = null
 
-      if (
-        this.sample.loop !== null &&
-        advancedIndex >= this.sample.loop.end &&
-        this.isLooping
-      ) {
+      if (this.sample.loop !== null && advancedIndex >= this.sample.loop.end) {
         loopIndex =
           this.sample.loop.start + (advancedIndex - Math.floor(advancedIndex))
       }
