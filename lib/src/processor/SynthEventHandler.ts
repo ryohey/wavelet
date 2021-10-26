@@ -51,7 +51,17 @@ export class SynthEventHandler {
         e.isProcessed = true
       }
     }
-    arrayRemove(this.scheduledEvents, (e) => e.isProcessed)
+
+    this.removeProcessedEvents()
+  }
+
+  private removeProcessedEvents() {
+    for (let i = this.scheduledEvents.length - 1; i >= 0; i--) {
+      const ev = this.scheduledEvents[i]
+      if (ev.isProcessed) {
+        this.scheduledEvents.splice(i, 1)
+      }
+    }
   }
 
   handleImmediateEvent(e: ImmediateEvent) {
@@ -187,15 +197,6 @@ export class SynthEventHandler {
       if (e.midi.channel === channel) {
         e.isProcessed = true
       }
-    }
-  }
-}
-
-function arrayRemove<T>(arr: T[], test: (e: T) => boolean) {
-  for (let i = arr.length - 1; i >= 0; i--) {
-    const ev = arr[i]
-    if (test(ev)) {
-      arr.splice(i, 1)
     }
   }
 }

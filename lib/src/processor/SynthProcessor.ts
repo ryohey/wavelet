@@ -203,17 +203,19 @@ export class SynthProcessor extends AudioWorkletProcessor {
       const state = this.channels[channel]
 
       for (let key in state.oscillators) {
-        for (const oscillator of state.oscillators[key]) {
+        for (let i = state.oscillators[key].length - 1; i >= 0; i--) {
+          const oscillator = state.oscillators[key][i]
+
           oscillator.speed = Math.pow(2, state.pitchBend / 12)
           oscillator.volume = state.volume * state.expression
           oscillator.pan = state.pan
           oscillator.modulation = state.modulation
           oscillator.process([outputs[0][0], outputs[0][1]])
-        }
 
-        state.oscillators[key] = state.oscillators[key]?.filter(
-          (osc) => osc.isPlaying
-        )
+          if (!oscillator.isPlaying) {
+            state.oscillators[key].splice(i, 1)
+          }
+        }
       }
     }
 
