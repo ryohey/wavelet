@@ -7,7 +7,6 @@ export class WavetableOscillator {
   private sampleIndex = 0
   private _isPlaying = false
   private _isNoteOff = false
-  private isHold = false
   private baseSpeed = 1
   private readonly envelope: AmplitudeEnvelope
   private readonly pitchLFO = new LFO()
@@ -25,6 +24,9 @@ export class WavetableOscillator {
 
   // -1 to 1
   pan = 0
+
+  // This oscillator should be note off when hold pedal off
+  isHold = false
 
   constructor(sample: SampleData<Float32Array>) {
     this.sample = sample
@@ -44,10 +46,6 @@ export class WavetableOscillator {
   }
 
   noteOff() {
-    if (this.isHold) {
-      return
-    }
-
     this.envelope.noteOff()
     this._isNoteOff = true
   }
@@ -108,14 +106,6 @@ export class WavetableOscillator {
         this._isPlaying = false
         break
       }
-    }
-  }
-
-  setHold(hold: boolean) {
-    this.isHold = hold
-
-    if (!hold && !this._isNoteOff) {
-      this.noteOff()
     }
   }
 
