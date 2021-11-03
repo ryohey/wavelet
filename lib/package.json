@@ -1,6 +1,6 @@
 {
   "name": "@ryohey/wavelet",
-  "version": "0.3.2",
+  "version": "0.3.4",
   "description": "A wavetable synthesizer that never stops the UI thread created by AudioWorklet.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -12,7 +12,7 @@
   "license": "MIT",
   "dependencies": {
     "@ryohey/sf2parser": "^1.2.0",
-    "midifile-ts": "^1.3.2"
+    "midifile-ts": "^1.4.0"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^21.0.0",

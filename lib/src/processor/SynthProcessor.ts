@@ -14,6 +14,7 @@ interface ChannelState {
   pan: number // -1 to 1
   modulation: number
   oscillators: { [key: number]: WavetableOscillator[] }
+  hold: boolean
 }
 
 const initialChannelState = (): ChannelState => ({
@@ -26,6 +27,7 @@ const initialChannelState = (): ChannelState => ({
   expression: 1,
   pan: 0,
   modulation: 0,
+  hold: false,
 })
 
 const RHYTHM_CHANNEL = 9
@@ -116,7 +118,11 @@ export class SynthProcessor extends AudioWorkletProcessor {
 
     for (const osc of state.oscillators[pitch]) {
       if (!osc.isNoteOff) {
-        osc.noteOff()
+        if (state.hold) {
+          osc.isHold = true
+        } else {
+          osc.noteOff()
+        }
       }
     }
   }
@@ -159,10 +165,17 @@ export class SynthProcessor extends AudioWorkletProcessor {
   hold(channel: number, value: number) {
     const hold = value >= 64
     const state = this.getChannelState(channel)
+    state.hold = hold
+
+    if (hold) {
+      return
+    }
 
     for (const key in state.oscillators) {
       for (const osc of state.oscillators[key]) {
-        osc.setHold(hold)
+        if (osc.isHold) {
+          osc.noteOff()
+        }
       }
     }
   }
@@ -203,17 +216,19 @@ export class SynthProcessor extends AudioWorkletProcessor {
       const state = this.channels[channel]
 
       for (let key in state.oscillators) {
-        for (const oscillator of state.oscillators[key]) {
+        for (let i = state.oscillators[key].length - 1; i >= 0; i--) {
+          const oscillator = state.oscillators[key][i]
+
           oscillator.speed = Math.pow(2, state.pitchBend / 12)
           oscillator.volume = state.volume * state.expression
           oscillator.pan = state.pan
           oscillator.modulation = state.modulation
           oscillator.process([outputs[0][0], outputs[0][1]])
-        }
 
-        state.oscillators[key] = state.oscillators[key]?.filter(
-          (osc) => osc.isPlaying
-        )
+          if (!oscillator.isPlaying) {
+            state.oscillators[key].splice(i, 1)
+          }
+        }
       }
     }
 

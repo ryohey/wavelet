@@ -34,16 +34,3 @@ export default {
     }),
   ],
 }
-
-function copyWorker(src, dst) {
-  // https://lihautan.com/12-line-rollup-plugin/
-  return {
-    name: "copy-worker",
-    load() {
-      this.addWatchFile(src)
-    },
-    generateBundle() {
-      fs.copyFileSync(src, dst)
-    },
-  }
-}
