@@ -1,10 +1,18 @@
-import { getSamplesFromSoundFont, SynthEvent } from "@ryohey/wavelet"
+import {
+  getSamplesFromSoundFont,
+  renderAudio,
+  SynthEvent,
+} from "@ryohey/wavelet"
 import { deserialize, MidiFile, read, Stream } from "midifile-ts"
 import { MIDIPlayer } from "./MIDIPlayer"
+import { midiToSynthEvents } from "./midiToSynthEvents"
+
+const soundFontUrl = "soundfonts/A320U.sf2"
 
 const main = async () => {
   const context = new AudioContext()
   let synth: AudioWorkletNode
+  let soundFontData: ArrayBuffer | null = null
 
   const setup = async () => {
     try {
@@ -24,10 +32,11 @@ const main = async () => {
   }
 
   const loadSoundFont = async () => {
-    const url = "soundfonts/A320U.sf2"
-
-    const data = await (await fetch(url)).arrayBuffer()
-    const parsed = getSamplesFromSoundFont(new Uint8Array(data), context)
+    soundFontData = await (await fetch(soundFontUrl)).arrayBuffer()
+    const parsed = getSamplesFromSoundFont(
+      new Uint8Array(soundFontData),
+      context
+    )
 
     for (const sample of parsed) {
       postSynthMessage(
@@ -67,6 +76,8 @@ const main = async () => {
   const fileInput = document.getElementById("open")!
   const playButton = document.getElementById("button-play")!
   const pauseButton = document.getElementById("button-pause")!
+  const exportButton = document.getElementById("button-export")!
+
   const seekbar = document.getElementById("seekbar")! as HTMLInputElement
   seekbar.setAttribute("max", "1")
   seekbar.setAttribute("step", "0.0001")
@@ -82,6 +93,7 @@ const main = async () => {
   })
 
   let midiPlayer: MIDIPlayer | null = null
+  let midi: MidiFile | null = null
 
   const playMIDI = (midi: MidiFile) => {
     midiPlayer?.pause()
@@ -99,7 +111,7 @@ const main = async () => {
     context.resume()
     const reader = new FileReader()
     reader.onload = async () => {
-      const midi = read(reader.result as ArrayBuffer)
+      midi = read(reader.result as ArrayBuffer)
       playMIDI(midi)
     }
     const input = e.currentTarget as HTMLInputElement
@@ -114,6 +126,18 @@ const main = async () => {
 
   pauseButton.addEventListener("click", () => {
     midiPlayer?.pause()
+  })
+
+  exportButton.addEventListener("click", async () => {
+    if (midi === null || soundFontData === null) {
+      return
+    }
+    const events = midiToSynthEvents(midi, sampleRate)
+    const audioBuffer = await renderAudio(soundFontData, context, events, 44100)
+    const source = context.createBufferSource()
+    source.buffer = audioBuffer
+    source.connect(context.destination)
+    source.start()
   })
 }
 

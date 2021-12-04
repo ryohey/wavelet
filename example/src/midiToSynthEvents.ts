@@ -1,5 +1,5 @@
+import { SynthEvent } from "@ryohey/wavelet/src/SynthEvent"
 import { AnyEvent, EndOfTrackEvent, MidiFile } from "midifile-ts"
-import { SynthEvent } from "../SynthEvent"
 
 interface Tick {
   tick: number
@@ -26,10 +26,6 @@ export const midiToSynthEvents = (
 ): SynthEvent[] => {
   const events = midi.tracks.flatMap(addTick).sort((a, b) => a.tick - b.tick)
 
-  const endOfSong = Math.max(
-    ...events.filter(isEndOfTrackEvent).map((e) => e.tick)
-  )
-
   const now = 0
   let bpm = 120
 
@@ -52,9 +48,6 @@ export const midiToSynthEvents = (
         switch (e.subtype) {
           case "setTempo":
             bpm = (60 * 1000000) / e.microsecondsPerBeat
-            break
-          default:
-            console.warn(`not supported meta event`, e)
             break
         }
     }

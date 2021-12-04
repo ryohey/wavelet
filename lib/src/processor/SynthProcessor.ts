@@ -15,7 +15,8 @@ export class SynthProcessor extends AudioWorkletProcessor {
     }
   }
 
-  process(inputs: Float32Array[][], outputs: Float32Array[][]) {
+  process(_inputs: Float32Array[][], outputs: Float32Array[][]) {
     this.synth.process(outputs[0])
+    return true
   }
 }

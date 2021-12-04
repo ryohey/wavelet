@@ -1,16 +1,16 @@
-import { MidiFile } from "midifile-ts"
+import { SynthEvent } from ".."
 import { SynthProcessorCore } from "../processor/SynthProcessorCore"
 import { BufferCreator, getSamplesFromSoundFont } from "../soundfont/loader"
-import { midiToSynthEvents } from "./midiToSynthEvents"
+
+const getSongLength = (events: SynthEvent[]) =>
+  Math.max(...events.map((e) => (e.type === "midi" ? e.delayTime : 0))) / 1000
 
 export const renderAudio = async (
+  soundFontData: ArrayBuffer,
   context: BufferCreator,
-  midi: MidiFile,
+  events: SynthEvent[],
   sampleRate: number
 ): Promise<AudioBuffer> => {
-  const url = "soundfonts/A320U.sf2"
-
-  const soundFontData = await (await fetch(url)).arrayBuffer()
   const parsed = getSamplesFromSoundFont(new Uint8Array(soundFontData), context)
 
   let currentFrame = 0
@@ -27,10 +27,9 @@ export const renderAudio = async (
     })
   }
 
-  const events = midiToSynthEvents(midi, sampleRate)
   events.forEach((e) => synth.addEvent(e))
 
-  const songLengthSec = 5
+  const songLengthSec = getSongLength(events)
   const bufSize = 500
   const iterCount = Math.ceil((songLengthSec * sampleRate) / bufSize)
   const audioBufferSize = iterCount * bufSize

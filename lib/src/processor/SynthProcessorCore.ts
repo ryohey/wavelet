@@ -38,11 +38,12 @@ type Sample = SampleData<Float32Array>
 export class SynthProcessorCore {
   private sampleTable = new SampleTable()
   private channels: { [key: number]: ChannelState } = {}
-  private readonly eventHandler = new SynthEventHandler(this)
+  private readonly eventHandler: SynthEventHandler
   private readonly sampleRate: number
   private readonly getCurrentFrame: () => number
 
   constructor(sampleRate: number, getCurrentFrame: () => number) {
+    this.eventHandler = new SynthEventHandler(this)
     this.sampleRate = sampleRate
     this.getCurrentFrame = getCurrentFrame
   }
@@ -216,7 +217,7 @@ export class SynthProcessorCore {
     return newState
   }
 
-  process(outputs: Float32Array[]) {
+  process(outputs: Float32Array[]): void {
     this.eventHandler.processScheduledEvents()
 
     for (const channel in this.channels) {
@@ -245,7 +246,5 @@ export class SynthProcessorCore {
       outputs[0][i] *= masterVolume
       outputs[1][i] *= masterVolume
     }
-
-    return true
   }
 }
