@@ -7,7 +7,7 @@ import {
 } from "../SynthEvent"
 import { DistributiveOmit } from "../types"
 import { logger } from "./logger"
-import { SynthProcessor } from "./SynthProcessor"
+import { SynthProcessorCore } from "./SynthProcessorCore"
 
 type DelayedEvent = MIDIEvent & { receivedFrame: number; isProcessed: boolean }
 type RPNControllerEvent = DistributiveOmit<ControllerEvent, "deltaTime">
@@ -20,13 +20,17 @@ interface RPN {
 }
 
 export class SynthEventHandler {
-  private processor: SynthProcessor
+  private processor: SynthProcessorCore
   private scheduledEvents: DelayedEvent[] = []
   private rpnEvents: { [channel: number]: RPN | undefined } = {}
   private bankSelectMSB: { [channel: number]: number | undefined } = {}
 
-  constructor(processor: SynthProcessor) {
+  constructor(processor: SynthProcessorCore) {
     this.processor = processor
+  }
+
+  private get currentFrame(): number {
+    return this.processor.currentFrame
   }
 
   addEvent(e: SynthEvent) {
@@ -36,7 +40,7 @@ export class SynthEventHandler {
       // handle in process
       this.scheduledEvents.push({
         ...e,
-        receivedFrame: currentFrame,
+        receivedFrame: this.currentFrame,
         isProcessed: false,
       })
     } else {
@@ -46,7 +50,10 @@ export class SynthEventHandler {
 
   processScheduledEvents() {
     for (const e of this.scheduledEvents) {
-      if (!e.isProcessed && e.receivedFrame + e.delayTime <= currentFrame) {
+      if (
+        !e.isProcessed &&
+        e.receivedFrame + e.delayTime <= this.currentFrame
+      ) {
         this.handleDelayableEvent(e.midi)
         e.isProcessed = true
       }
