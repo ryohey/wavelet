@@ -26,7 +26,7 @@ export const renderAudio = async (
   events.forEach((e) => synth.addEvent(e))
 
   const songLengthSec = getSongLength(events)
-  const bufSize = 500
+  const bufSize = 128
   const iterCount = Math.ceil(songLengthSec / bufSize)
   const audioBufferSize = iterCount * bufSize
 
