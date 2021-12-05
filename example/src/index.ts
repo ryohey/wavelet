@@ -1,5 +1,6 @@
 import {
   audioDataToAudioBuffer,
+  CancelMessage,
   getSamplesFromSoundFont,
   OutMessage,
   StartMessage,
@@ -137,15 +138,28 @@ const main = async () => {
     const sampleRate = 44100
     const events = midiToSynthEvents(midi, sampleRate)
     const message: StartMessage = {
+      type: "start",
       samples,
       events,
       sampleRate,
     }
     worker.postMessage(message)
 
+    exportPanel.innerHTML = ""
+
     const progress = document.createElement("progress")
     progress.value = 0
     exportPanel.appendChild(progress)
+
+    const cancelButton = document.createElement("button")
+    cancelButton.textContent = "cancel"
+    cancelButton.onclick = () => {
+      const message: CancelMessage = {
+        type: "cancel",
+      }
+      worker.postMessage(message)
+    }
+    exportPanel.appendChild(cancelButton)
 
     worker.onmessage = async (e: MessageEvent<OutMessage>) => {
       switch (e.data.type) {
@@ -155,6 +169,7 @@ const main = async () => {
         }
         case "complete": {
           progress.remove()
+          cancelButton.remove()
 
           const audioBuffer = audioDataToAudioBuffer(e.data.audioData)
 

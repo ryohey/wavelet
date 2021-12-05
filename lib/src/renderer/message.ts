@@ -1,12 +1,17 @@
 import { LoadSampleEvent, SynthEvent } from "../SynthEvent"
 
-export type InMessage = StartMessage
+export type InMessage = StartMessage | CancelMessage
 export type OutMessage = ProgressMessage | CompleteMessage
 
 export interface StartMessage {
+  type: "start"
   samples: LoadSampleEvent[]
   events: SynthEvent[]
   sampleRate: number
+}
+
+export interface CancelMessage {
+  type: "cancel"
 }
 
 export interface ProgressMessage {

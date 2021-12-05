@@ -8,11 +8,16 @@ const getSongLength = (events: SynthEvent[]) =>
 const Sleep = (time: number) =>
   new Promise((resolve) => setTimeout(resolve, time))
 
+export interface CancellationToken {
+  cancelled: boolean
+}
+
 export const renderAudio = async (
   samples: LoadSampleEvent[],
   events: SynthEvent[],
   sampleRate: number,
-  onProgress?: (numFrames: number, totalFrames: number) => void
+  onProgress?: (numFrames: number, totalFrames: number) => void,
+  cancel?: Readonly<CancellationToken>
 ): Promise<AudioData> => {
   let currentFrame = 0
   const synth = new SynthProcessorCore(sampleRate, () => currentFrame)
@@ -40,6 +45,10 @@ export const renderAudio = async (
     // give a chance to terminate the loop
     if (i % 1000 === 0) {
       await Sleep(0)
+
+      if (cancel?.cancelled) {
+        throw new Error("renderAudio cancelled")
+      }
     }
   }
 
