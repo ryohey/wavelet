@@ -1,5 +1,5 @@
-import { SynthEvent } from "@ryohey/wavelet/src/SynthEvent"
-import { AnyEvent, EndOfTrackEvent, MidiFile } from "midifile-ts"
+import { SynthEvent } from "@ryohey/wavelet"
+import { AnyEvent, MidiFile } from "midifile-ts"
 
 interface Tick {
   tick: number
@@ -13,9 +13,6 @@ function addTick(events: AnyEvent[], track: number): (AnyEvent & Tick)[] {
     return { ...e, tick, track }
   })
 }
-
-export const isEndOfTrackEvent = (e: AnyEvent): e is EndOfTrackEvent =>
-  "subtype" in e && e.subtype === "endOfTrack"
 
 const tickToMillisec = (tick: number, bpm: number, timebase: number) =>
   (tick / (timebase / 60) / bpm) * 1000
