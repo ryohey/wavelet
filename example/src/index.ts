@@ -1,10 +1,21 @@
-import { getSamplesFromSoundFont, SynthEvent } from "@ryohey/wavelet"
+import {
+  audioDataToAudioBuffer,
+  getSamplesFromSoundFont,
+  OutMessage,
+  StartMessage,
+  SynthEvent,
+} from "@ryohey/wavelet"
 import { deserialize, MidiFile, read, Stream } from "midifile-ts"
+import { encode } from "wav-encoder"
 import { MIDIPlayer } from "./MIDIPlayer"
+import { midiToSynthEvents } from "./midiToSynthEvents"
+
+const soundFontUrl = "soundfonts/A320U.sf2"
 
 const main = async () => {
   const context = new AudioContext()
   let synth: AudioWorkletNode
+  let soundFontData: ArrayBuffer | null = null
 
   const setup = async () => {
     try {
@@ -24,22 +35,16 @@ const main = async () => {
   }
 
   const loadSoundFont = async () => {
-    const url = "soundfonts/A320U.sf2"
-
-    const data = await (await fetch(url)).arrayBuffer()
-    const parsed = getSamplesFromSoundFont(new Uint8Array(data), context)
+    soundFontData = await (await fetch(soundFontUrl)).arrayBuffer()
+    const parsed = getSamplesFromSoundFont(
+      new Uint8Array(soundFontData),
+      context
+    )
 
     for (const sample of parsed) {
       postSynthMessage(
-        {
-          type: "loadSample",
-          sample,
-          bank: sample.bank,
-          instrument: sample.instrument,
-          keyRange: sample.keyRange,
-          velRange: sample.velRange,
-        },
-        [sample.buffer] // transfer instead of copy)
+        sample,
+        [sample.sample.buffer] // transfer instead of copy
       )
     }
   }
@@ -67,6 +72,9 @@ const main = async () => {
   const fileInput = document.getElementById("open")!
   const playButton = document.getElementById("button-play")!
   const pauseButton = document.getElementById("button-pause")!
+  const exportButton = document.getElementById("button-export")!
+  const exportPanel = document.getElementById("export-panel")!
+
   const seekbar = document.getElementById("seekbar")! as HTMLInputElement
   seekbar.setAttribute("max", "1")
   seekbar.setAttribute("step", "0.0001")
@@ -82,6 +90,7 @@ const main = async () => {
   })
 
   let midiPlayer: MIDIPlayer | null = null
+  let midi: MidiFile | null = null
 
   const playMIDI = (midi: MidiFile) => {
     midiPlayer?.pause()
@@ -99,7 +108,7 @@ const main = async () => {
     context.resume()
     const reader = new FileReader()
     reader.onload = async () => {
-      const midi = read(reader.result as ArrayBuffer)
+      midi = read(reader.result as ArrayBuffer)
       playMIDI(midi)
     }
     const input = e.currentTarget as HTMLInputElement
@@ -114,6 +123,59 @@ const main = async () => {
 
   pauseButton.addEventListener("click", () => {
     midiPlayer?.pause()
+  })
+
+  exportButton.addEventListener("click", async () => {
+    if (midi === null || soundFontData === null) {
+      return
+    }
+    const worker = new Worker("/js/rendererWorker.js")
+    const samples = getSamplesFromSoundFont(
+      new Uint8Array(soundFontData),
+      context
+    )
+    const sampleRate = 44100
+    const events = midiToSynthEvents(midi, sampleRate)
+    const message: StartMessage = {
+      samples,
+      events,
+      sampleRate,
+    }
+    worker.postMessage(message)
+
+    const progress = document.createElement("progress")
+    progress.value = 0
+    exportPanel.appendChild(progress)
+
+    worker.onmessage = async (e: MessageEvent<OutMessage>) => {
+      switch (e.data.type) {
+        case "progress": {
+          progress.value = e.data.numBytes / e.data.totalBytes
+          break
+        }
+        case "complete": {
+          progress.remove()
+
+          const audioBuffer = audioDataToAudioBuffer(e.data.audioData)
+
+          const wavData = await encode({
+            sampleRate: audioBuffer.sampleRate,
+            channelData: [
+              audioBuffer.getChannelData(0),
+              audioBuffer.getChannelData(1),
+            ],
+          })
+
+          const blob = new Blob([wavData], { type: "audio/wav" })
+          const audio = new Audio()
+          const url = window.URL.createObjectURL(blob)
+          audio.src = url
+          audio.controls = true
+          exportPanel.appendChild(audio)
+          break
+        }
+      }
+    }
   })
 }
 

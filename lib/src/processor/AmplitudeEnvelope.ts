@@ -20,9 +20,11 @@ export class AmplitudeEnvelope {
   private readonly parameter: AmplitudeEnvelopeParameter
   private phase = EnvelopePhase.attack
   private lastAmplitude = 0
+  private readonly sampleRate: number
 
-  constructor(parameter: AmplitudeEnvelopeParameter) {
+  constructor(parameter: AmplitudeEnvelopeParameter, sampleRate: number) {
     this.parameter = parameter
+    this.sampleRate = sampleRate
   }
 
   noteOn() {
@@ -42,6 +44,7 @@ export class AmplitudeEnvelope {
 
   getAmplitude(bufferSize: number): number {
     const { attackTime, decayTime, sustainLevel, releaseTime } = this.parameter
+    const { sampleRate } = this
 
     // Attack
     switch (this.phase) {

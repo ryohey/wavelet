@@ -9,7 +9,8 @@ export class WavetableOscillator {
   private _isNoteOff = false
   private baseSpeed = 1
   private readonly envelope: AmplitudeEnvelope
-  private readonly pitchLFO = new LFO()
+  private readonly pitchLFO: LFO
+  private readonly sampleRate: number
 
   speed = 1
   // 0 to 1
@@ -28,9 +29,11 @@ export class WavetableOscillator {
   // This oscillator should be note off when hold pedal off
   isHold = false
 
-  constructor(sample: SampleData<Float32Array>) {
+  constructor(sample: SampleData<Float32Array>, sampleRate: number) {
     this.sample = sample
-    this.envelope = new AmplitudeEnvelope(sample.amplitudeEnvelope)
+    this.sampleRate = sampleRate
+    this.envelope = new AmplitudeEnvelope(sample.amplitudeEnvelope, sampleRate)
+    this.pitchLFO = new LFO(sampleRate)
   }
 
   noteOn(pitch: number, velocity: number) {
@@ -60,7 +63,7 @@ export class WavetableOscillator {
     }
 
     const speed =
-      (this.baseSpeed * this.speed * this.sample.sampleRate) / sampleRate
+      (this.baseSpeed * this.speed * this.sample.sampleRate) / this.sampleRate
     const volume = this.velocity * this.volume * this.sample.volume
 
     // zero to pi/2
