@@ -1,6 +1,8 @@
 import {
+  audioDataToAudioBuffer,
   getSamplesFromSoundFont,
-  renderAudio,
+  OutMessage,
+  StartMessage,
   SynthEvent,
 } from "@ryohey/wavelet"
 import { deserialize, MidiFile, read, Stream } from "midifile-ts"
@@ -40,15 +42,8 @@ const main = async () => {
 
     for (const sample of parsed) {
       postSynthMessage(
-        {
-          type: "loadSample",
-          sample,
-          bank: sample.bank,
-          instrument: sample.instrument,
-          keyRange: sample.keyRange,
-          velRange: sample.velRange,
-        },
-        [sample.buffer] // transfer instead of copy)
+        sample,
+        [sample.sample.buffer] // transfer instead of copy
       )
     }
   }
@@ -132,12 +127,35 @@ const main = async () => {
     if (midi === null || soundFontData === null) {
       return
     }
+    const worker = new Worker("/js/rendererWorker.js")
+    const samples = getSamplesFromSoundFont(
+      new Uint8Array(soundFontData),
+      context
+    )
+    const sampleRate = 44100
     const events = midiToSynthEvents(midi, sampleRate)
-    const audioBuffer = await renderAudio(soundFontData, context, events, 44100)
-    const source = context.createBufferSource()
-    source.buffer = audioBuffer
-    source.connect(context.destination)
-    source.start()
+    const message: StartMessage = {
+      samples,
+      events,
+      sampleRate,
+    }
+    worker.postMessage(message)
+    worker.onmessage = (e: MessageEvent<OutMessage>) => {
+      switch (e.data.type) {
+        case "progress": {
+          console.log(e.data.numBytes / e.data.totalBytes)
+          break
+        }
+        case "complete": {
+          const source = context.createBufferSource()
+          const audioBuffer = audioDataToAudioBuffer(e.data.audioData)
+          source.buffer = audioBuffer
+          source.connect(context.destination)
+          source.start()
+          break
+        }
+      }
+    }
   })
 }
 

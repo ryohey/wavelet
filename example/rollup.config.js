@@ -5,6 +5,12 @@ import rollupTypescript from "@rollup/plugin-typescript"
 import fs from "fs"
 import serve from "rollup-plugin-serve"
 
+const plugins = [
+  nodeResolve({ preferBuiltins: false, browser: true }),
+  commonjs(),
+  rollupTypescript(),
+]
+
 export default {
   input: "src/index.ts",
   output: {
@@ -13,13 +19,15 @@ export default {
     format: "iife",
   },
   plugins: [
-    nodeResolve({ preferBuiltins: false, browser: true }),
-    commonjs(),
-    rollupTypescript(),
+    ...plugins,
     copy({
       targets: [
         {
           src: "../node_modules/@ryohey/wavelet/dist/processor.*",
+          dest: "public/js",
+        },
+        {
+          src: "../node_modules/@ryohey/wavelet/dist/rendererWorker.*",
           dest: "public/js",
         },
       ],

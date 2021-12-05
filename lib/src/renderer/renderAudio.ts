@@ -1,32 +1,19 @@
-import { SynthEvent } from ".."
+import { AudioData, LoadSampleEvent, SynthEvent } from ".."
 import { SynthProcessorCore } from "../processor/SynthProcessorCore"
-import { BufferCreator, getSamplesFromSoundFont } from "../soundfont/loader"
 
 const getSongLength = (events: SynthEvent[]) =>
   Math.max(...events.map((e) => (e.type === "midi" ? e.delayTime : 0))) / 1000
 
 export const renderAudio = async (
-  soundFontData: ArrayBuffer,
-  context: BufferCreator,
+  samples: LoadSampleEvent[],
   events: SynthEvent[],
-  sampleRate: number
-): Promise<AudioBuffer> => {
-  const parsed = getSamplesFromSoundFont(new Uint8Array(soundFontData), context)
-
+  sampleRate: number,
+  onProgress?: (numBytes: number, totalBytes: number) => void
+): Promise<AudioData> => {
   let currentFrame = 0
   const synth = new SynthProcessorCore(sampleRate, () => currentFrame)
 
-  for (const sample of parsed) {
-    synth.addEvent({
-      type: "loadSample",
-      sample,
-      bank: sample.bank,
-      instrument: sample.instrument,
-      keyRange: sample.keyRange,
-      velRange: sample.velRange,
-    })
-  }
-
+  samples.forEach((e) => synth.addEvent(e))
   events.forEach((e) => synth.addEvent(e))
 
   const songLengthSec = getSongLength(events)
@@ -34,19 +21,23 @@ export const renderAudio = async (
   const iterCount = Math.ceil((songLengthSec * sampleRate) / bufSize)
   const audioBufferSize = iterCount * bufSize
 
-  const audioBuffer = new AudioBuffer({
-    sampleRate,
-    length: audioBufferSize,
-    numberOfChannels: 2,
-  })
+  const leftData = new Float32Array(audioBufferSize)
+  const rightData = new Float32Array(audioBufferSize)
 
   for (let i = 0; i < iterCount; i++) {
     const buffer = [new Float32Array(bufSize), new Float32Array(bufSize)]
     synth.process(buffer)
-    audioBuffer.copyToChannel(buffer[0], 0, i * bufSize)
-    audioBuffer.copyToChannel(buffer[1], 1, i * bufSize)
+    const offset = i * bufSize
+    leftData.set(buffer[0], offset)
+    rightData.set(buffer[0], offset)
     currentFrame += bufSize
+    onProgress?.(offset, audioBufferSize)
   }
 
-  return audioBuffer
+  return {
+    length: audioBufferSize,
+    leftData: leftData.buffer,
+    rightData: rightData.buffer,
+    sampleRate,
+  }
 }

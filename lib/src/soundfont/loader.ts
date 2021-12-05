@@ -7,6 +7,7 @@ import {
   parse,
 } from "@ryohey/sf2parser"
 import { SampleData } from "../SynthEvent"
+import { sampleToSynthEvent } from "./sampleToSynthEvent"
 
 export type SoundFontSample = SampleData<ArrayBuffer> & {
   bank: number
@@ -143,7 +144,7 @@ export const getSamplesFromSoundFont = (
     }
   }
 
-  return result
+  return result.map(sampleToSynthEvent)
 }
 
 function convertTime(value: number) {
