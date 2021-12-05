@@ -5,8 +5,9 @@ import {
   StartMessage,
   SynthEvent,
 } from "@ryohey/wavelet"
-import { encode } from "audio-encoder"
 import { deserialize, MidiFile, read, Stream } from "midifile-ts"
+import { encode } from "wav-encoder"
+import { downloadBlob } from "./Downloader"
 import { MIDIPlayer } from "./MIDIPlayer"
 import { midiToSynthEvents } from "./midiToSynthEvents"
 
@@ -125,6 +126,16 @@ const main = async () => {
     midiPlayer?.pause()
   })
 
+  const playAudioBuffer = (audioBuffer: AudioBuffer) => {
+    const source = context.createBufferSource()
+    source.buffer = audioBuffer
+    source.connect(context.destination)
+    source.start()
+    source.onended = () => {
+      source.disconnect()
+    }
+  }
+
   exportButton.addEventListener("click", async () => {
     if (midi === null || soundFontData === null) {
       return
@@ -144,9 +155,10 @@ const main = async () => {
     worker.postMessage(message)
 
     const progress = document.createElement("progress")
+    progress.value = 0
     exportPanel.appendChild(progress)
 
-    worker.onmessage = (e: MessageEvent<OutMessage>) => {
+    worker.onmessage = async (e: MessageEvent<OutMessage>) => {
       switch (e.data.type) {
         case "progress": {
           progress.value = e.data.numBytes / e.data.totalBytes
@@ -157,17 +169,23 @@ const main = async () => {
 
           const audioBuffer = audioDataToAudioBuffer(e.data.audioData)
 
-          encode(
-            audioBuffer,
-            "WAV",
-            (progress) => {
-              console.log("encoding", progress)
-            },
-            (blob) => {
-              const audio = new Audio(URL.createObjectURL(blob))
-              document.body.appendChild(audio)
-            }
-          )
+          playAudioBuffer(audioBuffer)
+
+          const wavData = await encode({
+            sampleRate: audioBuffer.sampleRate,
+            channelData: [
+              audioBuffer.getChannelData(0),
+              audioBuffer.getChannelData(1),
+            ],
+          })
+
+          const blob = new Blob([wavData], { type: "audio/wav" })
+          const audio = new Audio()
+          audio.controls = true
+          const url = window.URL.createObjectURL(blob)
+          audio.src = url
+          exportPanel.appendChild(audio)
+          downloadBlob(blob, "output.wav")
           break
         }
       }
