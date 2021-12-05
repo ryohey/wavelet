@@ -5,6 +5,9 @@ import { SynthProcessorCore } from "../processor/SynthProcessorCore"
 const getSongLength = (events: SynthEvent[]) =>
   Math.max(...events.map((e) => (e.type === "midi" ? e.delayTime : 0)))
 
+const Sleep = (time: number) =>
+  new Promise((resolve) => setTimeout(resolve, time))
+
 export const renderAudio = async (
   samples: LoadSampleEvent[],
   events: SynthEvent[],
@@ -33,6 +36,11 @@ export const renderAudio = async (
     rightData.set(buffer[0], offset)
     currentFrame += bufSize
     onProgress?.(offset, audioBufferSize)
+
+    // give a chance to terminate the loop
+    if (i % 1000 === 0) {
+      await Sleep(0)
+    }
   }
 
   return {
