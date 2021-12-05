@@ -1,14 +1,15 @@
 import { AudioData, LoadSampleEvent, SynthEvent } from ".."
 import { SynthProcessorCore } from "../processor/SynthProcessorCore"
 
+// returns in frame unit
 const getSongLength = (events: SynthEvent[]) =>
-  Math.max(...events.map((e) => (e.type === "midi" ? e.delayTime : 0))) / 1000
+  Math.max(...events.map((e) => (e.type === "midi" ? e.delayTime : 0)))
 
 export const renderAudio = async (
   samples: LoadSampleEvent[],
   events: SynthEvent[],
   sampleRate: number,
-  onProgress?: (numBytes: number, totalBytes: number) => void
+  onProgress?: (numFrames: number, totalFrames: number) => void
 ): Promise<AudioData> => {
   let currentFrame = 0
   const synth = new SynthProcessorCore(sampleRate, () => currentFrame)
@@ -18,7 +19,7 @@ export const renderAudio = async (
 
   const songLengthSec = getSongLength(events)
   const bufSize = 500
-  const iterCount = Math.ceil((songLengthSec * sampleRate) / bufSize)
+  const iterCount = Math.ceil(songLengthSec / bufSize)
   const audioBufferSize = iterCount * bufSize
 
   const leftData = new Float32Array(audioBufferSize)
