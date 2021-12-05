@@ -23,7 +23,6 @@ export const midiToSynthEvents = (
 ): SynthEvent[] => {
   const events = midi.tracks.flatMap(addTick).sort((a, b) => a.tick - b.tick)
 
-  const now = 0
   let bpm = 120
 
   const synthEvents: SynthEvent[] = []
@@ -32,7 +31,7 @@ export const midiToSynthEvents = (
   // Send Channel Event to MIDI OUTPUT
   for (const e of events) {
     const timestamp = tickToMillisec(e.tick, bpm, midi.header.ticksPerBeat)
-    const delayTime = ((timestamp - now) / 1000) * sampleRate
+    const delayTime = (timestamp * sampleRate) / 1000
 
     switch (e.type) {
       case "channel":
