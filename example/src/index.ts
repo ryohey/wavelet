@@ -5,6 +5,7 @@ import {
   StartMessage,
   SynthEvent,
 } from "@ryohey/wavelet"
+import { encode } from "audio-encoder"
 import { deserialize, MidiFile, read, Stream } from "midifile-ts"
 import { MIDIPlayer } from "./MIDIPlayer"
 import { midiToSynthEvents } from "./midiToSynthEvents"
@@ -72,6 +73,7 @@ const main = async () => {
   const playButton = document.getElementById("button-play")!
   const pauseButton = document.getElementById("button-pause")!
   const exportButton = document.getElementById("button-export")!
+  const exportPanel = document.getElementById("export-panel")!
 
   const seekbar = document.getElementById("seekbar")! as HTMLInputElement
   seekbar.setAttribute("max", "1")
@@ -140,18 +142,32 @@ const main = async () => {
       sampleRate,
     }
     worker.postMessage(message)
+
+    const progress = document.createElement("progress")
+    exportPanel.appendChild(progress)
+
     worker.onmessage = (e: MessageEvent<OutMessage>) => {
       switch (e.data.type) {
         case "progress": {
-          console.log(e.data.numBytes / e.data.totalBytes)
+          progress.value = e.data.numBytes / e.data.totalBytes
           break
         }
         case "complete": {
-          const source = context.createBufferSource()
+          progress.remove()
+
           const audioBuffer = audioDataToAudioBuffer(e.data.audioData)
-          source.buffer = audioBuffer
-          source.connect(context.destination)
-          source.start()
+
+          encode(
+            audioBuffer,
+            "WAV",
+            (progress) => {
+              console.log("encoding", progress)
+            },
+            (blob) => {
+              const audio = new Audio(URL.createObjectURL(blob))
+              document.body.appendChild(audio)
+            }
+          )
           break
         }
       }
