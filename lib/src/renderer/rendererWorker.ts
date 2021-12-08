@@ -1,6 +1,6 @@
 import { InMessage } from ".."
 import { CompleteMessage, ProgressMessage } from "./message"
-import { CancellationToken, renderAudio } from "./renderAudio"
+import { renderAudio } from "./renderAudio"
 
 declare global {
   function postMessage(
@@ -9,31 +9,39 @@ declare global {
   ): void
 }
 
-let cancel: CancellationToken | null = null
+let cancelled: boolean = false
+
+// https://stackoverflow.com/a/61339321/1567777
+const channel = new MessageChannel()
+
+let promiseResolver: () => void
+
+channel.port2.onmessage = () => {
+  promiseResolver()
+}
+
+const fastSleep = async () => {
+  const promise = new Promise<void>((resolve) => {
+    promiseResolver = resolve
+  })
+  channel.port1.postMessage(null)
+  await promise
+}
 
 onmessage = async (e: MessageEvent<InMessage>) => {
   switch (e.data.type) {
     case "cancel": {
-      if (cancel !== null) {
-        cancel.cancelled = true
-      }
+      cancelled = true
       break
     }
     case "start": {
-      if (cancel !== null) {
-        throw new Error("rendering is already started.")
-      }
-
       const { samples, events, sampleRate } = e.data
-
-      cancel = {
-        cancelled: false,
-      }
 
       try {
         const audioData = await renderAudio(samples, events, {
           sampleRate,
-          cancel,
+          cancel: () => cancelled,
+          waitForEventLoop: fastSleep,
           onProgress: (numBytes, totalBytes) =>
             postMessage({
               type: "progress",

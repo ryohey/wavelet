@@ -5,18 +5,12 @@ import { SynthProcessorCore } from "../processor/SynthProcessorCore"
 const getSongLength = (events: SynthEvent[]) =>
   Math.max(...events.map((e) => (e.type === "midi" ? e.delayTime : 0)))
 
-const Sleep = (time: number) =>
-  new Promise((resolve) => setTimeout(resolve, time))
-
-export interface CancellationToken {
-  cancelled: boolean
-}
-
 export interface RenderAudioOptions {
   sampleRate?: number
   onProgress?: (numFrames: number, totalFrames: number) => void
-  cancel?: Readonly<CancellationToken>
+  cancel?: () => boolean
   bufferSize?: number
+  waitForEventLoop?: () => Promise<void>
 }
 
 export const renderAudio = async (
@@ -50,13 +44,14 @@ export const renderAudio = async (
     leftData.set(buffer[0], offset)
     rightData.set(buffer[0], offset)
     currentFrame += bufSize
-    options?.onProgress?.(offset, audioBufferSize)
 
-    // give a chance to terminate the loop
+    // give a chance to terminate the loop or update progress
     if (i % 1000 === 0) {
-      await Sleep(0)
+      await options?.waitForEventLoop?.()
 
-      if (options?.cancel?.cancelled) {
+      options?.onProgress?.(offset, audioBufferSize)
+
+      if (options?.cancel?.()) {
         throw new Error("renderAudio cancelled")
       }
     }

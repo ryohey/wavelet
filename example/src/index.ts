@@ -14,6 +14,9 @@ import { midiToSynthEvents } from "./midiToSynthEvents"
 
 const soundFontUrl = "soundfonts/A320U.sf2"
 
+const Sleep = (time: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, time))
+
 const main = async () => {
   const context = new AudioContext()
   let synth: AudioWorkletNode
@@ -217,9 +220,10 @@ const main = async () => {
     const startTime = performance.now()
     const result = await renderAudio(samples, events, {
       sampleRate,
-      onProgress: (numFrames, totalFrames) => {
-        progress.value = numFrames / totalFrames
-      },
+      bufferSize: 256,
+      waitForEventLoop: async () => await Sleep(0),
+      onProgress: (numFrames, totalFrames) =>
+        (progress.value = numFrames / totalFrames),
     })
     const endTime = performance.now()
     const songLength = result.length / result.sampleRate
