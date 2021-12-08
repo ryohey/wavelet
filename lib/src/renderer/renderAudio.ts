@@ -40,8 +40,11 @@ export const renderAudio = async (
   const leftData = new Float32Array(audioBufferSize)
   const rightData = new Float32Array(audioBufferSize)
 
+  const buffer = [new Float32Array(bufSize), new Float32Array(bufSize)]
+
   for (let i = 0; i < iterCount; i++) {
-    const buffer = [new Float32Array(bufSize), new Float32Array(bufSize)]
+    buffer[0].fill(0)
+    buffer[1].fill(0)
     synth.process(buffer)
     const offset = i * bufSize
     leftData.set(buffer[0], offset)
