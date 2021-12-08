@@ -31,18 +31,16 @@ onmessage = async (e: MessageEvent<InMessage>) => {
       }
 
       try {
-        const audioData = await renderAudio(
-          samples,
-          events,
+        const audioData = await renderAudio(samples, events, {
           sampleRate,
-          (numBytes, totalBytes) =>
+          cancel,
+          onProgress: (numBytes, totalBytes) =>
             postMessage({
               type: "progress",
               numBytes,
               totalBytes,
             }),
-          cancel
-        )
+        })
         postMessage({ type: "complete", audioData }, [
           audioData.leftData,
           audioData.rightData,

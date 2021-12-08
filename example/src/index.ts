@@ -3,6 +3,7 @@ import {
   CancelMessage,
   getSamplesFromSoundFont,
   OutMessage,
+  renderAudio,
   StartMessage,
   SynthEvent,
 } from "@ryohey/wavelet"
@@ -75,6 +76,8 @@ const main = async () => {
   const pauseButton = document.getElementById("button-pause")!
   const exportButton = document.getElementById("button-export")!
   const exportPanel = document.getElementById("export-panel")!
+  const benchmarkButton = document.getElementById("button-benchmark")!
+  const benchmarkPanel = document.getElementById("benchmark-panel")!
 
   const seekbar = document.getElementById("seekbar")! as HTMLInputElement
   seekbar.setAttribute("max", "1")
@@ -191,6 +194,48 @@ const main = async () => {
         }
       }
     }
+  })
+
+  benchmarkButton.addEventListener("click", async () => {
+    if (soundFontData === null) {
+      console.error("SoundFont is not loaded")
+      return
+    }
+    const midiData = await (await fetch("/midi/song.mid")).arrayBuffer()
+    const midi = read(midiData)
+    const samples = getSamplesFromSoundFont(
+      new Uint8Array(soundFontData),
+      context
+    )
+    const sampleRate = 44100
+    const events = midiToSynthEvents(midi, sampleRate)
+
+    benchmarkPanel.innerHTML += "<p>Benchmark test started.</p>"
+    const progress = document.createElement("progress")
+    progress.value = 0
+    benchmarkPanel.appendChild(progress)
+    const startTime = performance.now()
+    const result = await renderAudio(samples, events, {
+      sampleRate,
+      onProgress: (numFrames, totalFrames) => {
+        progress.value = numFrames / totalFrames
+      },
+    })
+    const endTime = performance.now()
+    const songLength = result.length / result.sampleRate
+    const processTime = endTime - startTime
+    benchmarkPanel.innerHTML += `
+      <p>Benchmark test completed.</p>
+      <ul>
+        <li>${
+          result.rightData.byteLength + result.leftData.byteLength
+        } bytes</li>
+        <li>${result.length} frames</li>
+        <li>${songLength} seconds</li>
+        <li>Take ${processTime} milliseconds</li>
+        <li>x${songLength / (processTime / 1000)} speed</li>
+      </ul>
+    `
   })
 }
 

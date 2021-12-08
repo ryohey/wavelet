@@ -12,21 +12,28 @@ export interface CancellationToken {
   cancelled: boolean
 }
 
+export interface RenderAudioOptions {
+  sampleRate?: number
+  onProgress?: (numFrames: number, totalFrames: number) => void
+  cancel?: Readonly<CancellationToken>
+  bufferSize?: number
+}
+
 export const renderAudio = async (
   samples: LoadSampleEvent[],
   events: SynthEvent[],
-  sampleRate: number,
-  onProgress?: (numFrames: number, totalFrames: number) => void,
-  cancel?: Readonly<CancellationToken>
+  options?: RenderAudioOptions
 ): Promise<AudioData> => {
   let currentFrame = 0
+  const sampleRate = options?.sampleRate ?? 44100
+  const bufSize = options?.bufferSize ?? 500
+
   const synth = new SynthProcessorCore(sampleRate, () => currentFrame)
 
   samples.forEach((e) => synth.addEvent(e))
   events.forEach((e) => synth.addEvent(e))
 
   const songLengthSec = getSongLength(events)
-  const bufSize = 128
   const iterCount = Math.ceil(songLengthSec / bufSize)
   const audioBufferSize = iterCount * bufSize
 
@@ -40,13 +47,13 @@ export const renderAudio = async (
     leftData.set(buffer[0], offset)
     rightData.set(buffer[0], offset)
     currentFrame += bufSize
-    onProgress?.(offset, audioBufferSize)
+    options?.onProgress?.(offset, audioBufferSize)
 
     // give a chance to terminate the loop
     if (i % 1000 === 0) {
       await Sleep(0)
 
-      if (cancel?.cancelled) {
+      if (options?.cancel?.cancelled) {
         throw new Error("renderAudio cancelled")
       }
     }
