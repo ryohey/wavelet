@@ -79,10 +79,11 @@ export class WavetableOscillator {
     const pitchLFOValue = this.pitchLFO.getValue(outputs[0].length)
     const pitchModulation =
       pitchLFOValue * this.modulation * (this.modulationDepthRange / 1200)
+    const modulatedSpeed = speed * (1 + pitchModulation)
 
     for (let i = 0; i < outputs[0].length; ++i) {
       const index = Math.floor(this.sampleIndex)
-      const advancedIndex = this.sampleIndex + speed * (1 + pitchModulation)
+      const advancedIndex = this.sampleIndex + modulatedSpeed
       let loopIndex: number | null = null
 
       if (this.sample.loop !== null && advancedIndex >= this.sample.loop.end) {
