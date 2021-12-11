@@ -9,7 +9,7 @@ import { DistributiveOmit } from "../types"
 import { logger } from "./logger"
 import { SynthProcessorCore } from "./SynthProcessorCore"
 
-type DelayedEvent = MIDIEvent & { receivedFrame: number; isProcessed: boolean }
+type DelayedEvent = MIDIEvent & { scheduledFrame: number }
 type RPNControllerEvent = DistributiveOmit<ControllerEvent, "deltaTime">
 
 interface RPN {
@@ -22,6 +22,7 @@ interface RPN {
 export class SynthEventHandler {
   private processor: SynthProcessorCore
   private scheduledEvents: DelayedEvent[] = []
+  private currentEvents: DelayedEvent[] = []
   private rpnEvents: { [channel: number]: RPN | undefined } = {}
   private bankSelectMSB: { [channel: number]: number | undefined } = {}
 
@@ -40,8 +41,7 @@ export class SynthEventHandler {
       // handle in process
       this.scheduledEvents.push({
         ...e,
-        receivedFrame: this.currentFrame,
-        isProcessed: false,
+        scheduledFrame: this.currentFrame + e.delayTime,
       })
     } else {
       this.handleImmediateEvent(e)
@@ -49,25 +49,20 @@ export class SynthEventHandler {
   }
 
   processScheduledEvents() {
-    for (const e of this.scheduledEvents) {
-      if (
-        !e.isProcessed &&
-        e.receivedFrame + e.delayTime <= this.currentFrame
-      ) {
-        this.handleDelayableEvent(e.midi)
-        e.isProcessed = true
+    for (let i = this.scheduledEvents.length - 1; i >= 0; i--) {
+      const e = this.scheduledEvents[i]
+      if (e.scheduledFrame <= this.currentFrame) {
+        this.scheduledEvents.splice(i, 1)
+        this.currentEvents.unshift(e)
       }
     }
 
-    this.removeProcessedEvents()
-  }
-
-  private removeProcessedEvents() {
-    for (let i = this.scheduledEvents.length - 1; i >= 0; i--) {
-      const ev = this.scheduledEvents[i]
-      if (ev.isProcessed) {
-        this.scheduledEvents.splice(i, 1)
+    while (true) {
+      const e = this.currentEvents.pop()
+      if (e === undefined) {
+        break
       }
+      this.handleDelayableEvent(e.midi)
     }
   }
 
@@ -200,9 +195,16 @@ export class SynthEventHandler {
   }
 
   private removeScheduledEvents(channel: number) {
-    for (const e of this.scheduledEvents) {
+    for (let i = this.scheduledEvents.length - 1; i >= 0; i--) {
+      const e = this.scheduledEvents[i]
       if (e.midi.channel === channel) {
-        e.isProcessed = true
+        this.scheduledEvents.splice(i, 1)
+      }
+    }
+    for (let i = this.currentEvents.length - 1; i >= 0; i--) {
+      const e = this.currentEvents[i]
+      if (e.midi.channel === channel) {
+        this.currentEvents.splice(i, 1)
       }
     }
   }
