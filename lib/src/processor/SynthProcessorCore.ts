@@ -224,9 +224,7 @@ export class SynthProcessorCore {
       const state = this.channels[channel]
 
       for (let key in state.oscillators) {
-        for (let i = state.oscillators[key].length - 1; i >= 0; i--) {
-          const oscillator = state.oscillators[key][i]
-
+        state.oscillators[key] = state.oscillators[key].filter((oscillator) => {
           oscillator.speed = Math.pow(2, state.pitchBend / 12)
           oscillator.volume = state.volume * state.expression
           oscillator.pan = state.pan
@@ -234,9 +232,10 @@ export class SynthProcessorCore {
           oscillator.process([outputs[0], outputs[1]])
 
           if (!oscillator.isPlaying) {
-            state.oscillators[key].splice(i, 1)
+            return false
           }
-        }
+          return true
+        })
       }
     }
 

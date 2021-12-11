@@ -49,13 +49,13 @@ export class SynthEventHandler {
   }
 
   processScheduledEvents() {
-    for (let i = this.scheduledEvents.length - 1; i >= 0; i--) {
-      const e = this.scheduledEvents[i]
+    this.scheduledEvents = this.scheduledEvents.filter((e) => {
       if (e.scheduledFrame <= this.currentFrame) {
-        this.scheduledEvents.splice(i, 1)
         this.currentEvents.unshift(e)
+        return false
       }
-    }
+      return true
+    })
 
     while (true) {
       const e = this.currentEvents.pop()
@@ -195,17 +195,11 @@ export class SynthEventHandler {
   }
 
   private removeScheduledEvents(channel: number) {
-    for (let i = this.scheduledEvents.length - 1; i >= 0; i--) {
-      const e = this.scheduledEvents[i]
-      if (e.midi.channel === channel) {
-        this.scheduledEvents.splice(i, 1)
-      }
-    }
-    for (let i = this.currentEvents.length - 1; i >= 0; i--) {
-      const e = this.currentEvents[i]
-      if (e.midi.channel === channel) {
-        this.currentEvents.splice(i, 1)
-      }
-    }
+    this.scheduledEvents = this.scheduledEvents.filter(
+      (e) => e.midi.channel !== channel
+    )
+    this.currentEvents = this.currentEvents.filter(
+      (e) => e.midi.channel !== channel
+    )
   }
 }
