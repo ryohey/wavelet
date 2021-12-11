@@ -1,4 +1,5 @@
 import { InMessage } from ".."
+import { FastSleep } from "./FastSleep"
 import { CompleteMessage, ProgressMessage } from "./message"
 import { renderAudio } from "./renderAudio"
 
@@ -11,22 +12,7 @@ declare global {
 
 let cancelled: boolean = false
 
-// https://stackoverflow.com/a/61339321/1567777
-const channel = new MessageChannel()
-
-let promiseResolver: () => void
-
-channel.port2.onmessage = () => {
-  promiseResolver()
-}
-
-const fastSleep = async () => {
-  const promise = new Promise<void>((resolve) => {
-    promiseResolver = resolve
-  })
-  channel.port1.postMessage(null)
-  await promise
-}
+const fastSleep = new FastSleep()
 
 onmessage = async (e: MessageEvent<InMessage>) => {
   switch (e.data.type) {
@@ -42,7 +28,7 @@ onmessage = async (e: MessageEvent<InMessage>) => {
           sampleRate,
           bufferSize,
           cancel: () => cancelled,
-          waitForEventLoop: fastSleep,
+          waitForEventLoop: async () => await fastSleep.wait(),
           onProgress: (numBytes, totalBytes) =>
             postMessage({
               type: "progress",
