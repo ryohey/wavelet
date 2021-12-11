@@ -6,6 +6,7 @@ import {
   SynthEvent,
 } from "../SynthEvent"
 import { DistributiveOmit } from "../types"
+import { insertSorted } from "./insertSorted"
 import { logger } from "./logger"
 import { SynthProcessorCore } from "./SynthProcessorCore"
 
@@ -39,23 +40,34 @@ export class SynthEventHandler {
 
     if ("delayTime" in e) {
       // handle in process
-      this.scheduledEvents.push({
-        ...e,
-        scheduledFrame: this.currentFrame + e.delayTime,
-      })
+      insertSorted(
+        this.scheduledEvents,
+        {
+          ...e,
+          scheduledFrame: this.currentFrame + e.delayTime,
+        },
+        "scheduledFrame"
+      )
     } else {
       this.handleImmediateEvent(e)
     }
   }
 
   processScheduledEvents() {
-    this.scheduledEvents = this.scheduledEvents.filter((e) => {
-      if (e.scheduledFrame <= this.currentFrame) {
-        this.currentEvents.unshift(e)
-        return false
+    if (this.scheduledEvents.length === 0) {
+      return
+    }
+
+    while (true) {
+      const e = this.scheduledEvents[0]
+      if (e === undefined || e.scheduledFrame > this.currentFrame) {
+        // scheduledEvents are sorted by scheduledFrame,
+        // so we can break early instead of iterating through all scheduledEvents,
+        break
       }
-      return true
-    })
+      this.scheduledEvents.shift()
+      this.currentEvents.unshift(e)
+    }
 
     while (true) {
       const e = this.currentEvents.pop()
