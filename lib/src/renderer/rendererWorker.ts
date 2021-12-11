@@ -35,11 +35,12 @@ onmessage = async (e: MessageEvent<InMessage>) => {
       break
     }
     case "start": {
-      const { samples, events, sampleRate } = e.data
+      const { samples, events, sampleRate, bufferSize } = e.data
 
       try {
         const audioData = await renderAudio(samples, events, {
           sampleRate,
+          bufferSize,
           cancel: () => cancelled,
           waitForEventLoop: fastSleep,
           onProgress: (numBytes, totalBytes) =>
