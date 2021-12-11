@@ -18,6 +18,9 @@ const soundFontUrl = "soundfonts/A320U.sf2"
 const Sleep = (time: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, time))
 
+const waitForAnimationFrame = () =>
+  new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()))
+
 const main = async () => {
   const context = new AudioContext()
   let synth: AudioWorkletNode
@@ -151,13 +154,24 @@ const main = async () => {
     exportPanel.appendChild(progress)
 
     const exportOnMainThread = async () => {
-      return await renderAudio(samples, events, {
+      const cancelButton = document.createElement("button")
+      cancelButton.textContent = "cancel"
+      let cancel = false
+      cancelButton.onclick = () => (cancel = true)
+      exportPanel.appendChild(cancelButton)
+
+      const result = await renderAudio(samples, events, {
         sampleRate,
         bufferSize: 256,
-        waitForEventLoop: async () => await Sleep(0),
+        cancel: () => cancel,
+        waitForEventLoop: waitForAnimationFrame,
         onProgress: (numFrames, totalFrames) =>
           (progress.value = numFrames / totalFrames),
       })
+
+      cancelButton.remove()
+
+      return result
     }
 
     const exportOnWorker = () =>
