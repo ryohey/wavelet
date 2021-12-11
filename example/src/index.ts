@@ -1,8 +1,10 @@
 import {
+  AudioData,
   audioDataToAudioBuffer,
   CancelMessage,
   getSamplesFromSoundFont,
   OutMessage,
+  renderAudio,
   StartMessage,
   SynthEvent,
 } from "@ryohey/wavelet"
@@ -12,6 +14,12 @@ import { MIDIPlayer } from "./MIDIPlayer"
 import { midiToSynthEvents } from "./midiToSynthEvents"
 
 const soundFontUrl = "soundfonts/A320U.sf2"
+
+const Sleep = (time: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, time))
+
+const waitForAnimationFrame = () =>
+  new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()))
 
 const main = async () => {
   const context = new AudioContext()
@@ -75,6 +83,10 @@ const main = async () => {
   const pauseButton = document.getElementById("button-pause")!
   const exportButton = document.getElementById("button-export")!
   const exportPanel = document.getElementById("export-panel")!
+  const benchmarkButton = document.getElementById("button-benchmark")!
+  const workerBenchmarkButton = document.getElementById(
+    "button-benchmark-worker"
+  )!
 
   const seekbar = document.getElementById("seekbar")! as HTMLInputElement
   seekbar.setAttribute("max", "1")
@@ -126,71 +138,169 @@ const main = async () => {
     midiPlayer?.pause()
   })
 
-  exportButton.addEventListener("click", async () => {
-    if (midi === null || soundFontData === null) {
+  const exportAudio = async (midi: MidiFile, type: "worker" | "mainthread") => {
+    if (soundFontData === null) {
       return
     }
-    const worker = new Worker("/js/rendererWorker.js")
     const samples = getSamplesFromSoundFont(
       new Uint8Array(soundFontData),
       context
     )
     const sampleRate = 44100
     const events = midiToSynthEvents(midi, sampleRate)
-    const message: StartMessage = {
-      type: "start",
-      samples,
-      events,
-      sampleRate,
-    }
-    worker.postMessage(message)
-
-    exportPanel.innerHTML = ""
 
     const progress = document.createElement("progress")
     progress.value = 0
     exportPanel.appendChild(progress)
 
-    const cancelButton = document.createElement("button")
-    cancelButton.textContent = "cancel"
-    cancelButton.onclick = () => {
-      const message: CancelMessage = {
-        type: "cancel",
-      }
-      worker.postMessage(message)
+    const exportOnMainThread = async () => {
+      const cancelButton = document.createElement("button")
+      cancelButton.textContent = "cancel"
+      let cancel = false
+      cancelButton.onclick = () => (cancel = true)
+      exportPanel.appendChild(cancelButton)
+
+      const result = await renderAudio(samples, events, {
+        sampleRate,
+        bufferSize: 256,
+        cancel: () => cancel,
+        waitForEventLoop: waitForAnimationFrame,
+        onProgress: (numFrames, totalFrames) =>
+          (progress.value = numFrames / totalFrames),
+      })
+
+      cancelButton.remove()
+
+      return result
     }
-    exportPanel.appendChild(cancelButton)
 
-    worker.onmessage = async (e: MessageEvent<OutMessage>) => {
-      switch (e.data.type) {
-        case "progress": {
-          progress.value = e.data.numBytes / e.data.totalBytes
-          break
+    const exportOnWorker = () =>
+      new Promise<AudioData>((resolve) => {
+        if (soundFontData === null) {
+          return
         }
-        case "complete": {
-          progress.remove()
-          cancelButton.remove()
-
-          const audioBuffer = audioDataToAudioBuffer(e.data.audioData)
-
-          const wavData = await encode({
-            sampleRate: audioBuffer.sampleRate,
-            channelData: [
-              audioBuffer.getChannelData(0),
-              audioBuffer.getChannelData(1),
-            ],
-          })
-
-          const blob = new Blob([wavData], { type: "audio/wav" })
-          const audio = new Audio()
-          const url = window.URL.createObjectURL(blob)
-          audio.src = url
-          audio.controls = true
-          exportPanel.appendChild(audio)
-          break
+        const worker = new Worker("/js/rendererWorker.js")
+        const samples = getSamplesFromSoundFont(
+          new Uint8Array(soundFontData),
+          context
+        )
+        const sampleRate = 44100
+        const events = midiToSynthEvents(midi, sampleRate)
+        const message: StartMessage = {
+          type: "start",
+          samples,
+          events,
+          sampleRate,
+          bufferSize: 128,
         }
-      }
+        worker.postMessage(message)
+
+        const cancelButton = document.createElement("button")
+        cancelButton.textContent = "cancel"
+        cancelButton.onclick = () => {
+          const message: CancelMessage = {
+            type: "cancel",
+          }
+          worker.postMessage(message)
+        }
+        exportPanel.appendChild(cancelButton)
+
+        worker.onmessage = async (e: MessageEvent<OutMessage>) => {
+          switch (e.data.type) {
+            case "progress": {
+              progress.value = e.data.numBytes / e.data.totalBytes
+              break
+            }
+            case "complete": {
+              progress.remove()
+              cancelButton.remove()
+              resolve(e.data.audioData)
+              break
+            }
+          }
+        }
+      })
+
+    let audioData: AudioData
+
+    switch (type) {
+      case "mainthread":
+        audioData = await exportOnMainThread()
+        break
+      case "worker":
+        audioData = await exportOnWorker()
+        break
     }
+
+    progress.remove()
+
+    const audioBuffer = audioDataToAudioBuffer(audioData)
+
+    const wavData = await encode({
+      sampleRate: audioBuffer.sampleRate,
+      channelData: [
+        audioBuffer.getChannelData(0),
+        audioBuffer.getChannelData(1),
+      ],
+    })
+
+    const blob = new Blob([wavData], { type: "audio/wav" })
+    const audio = new Audio()
+    const url = window.URL.createObjectURL(blob)
+    audio.src = url
+    audio.controls = true
+    exportPanel.appendChild(audio)
+
+    return audioData
+  }
+
+  exportButton.addEventListener("click", async () => {
+    if (midi === null || soundFontData === null) {
+      return
+    }
+    await exportAudio(midi, "worker")
+  })
+
+  const benchmark = async (type: "mainthread" | "worker") => {
+    if (soundFontData === null) {
+      console.error("SoundFont is not loaded")
+      return
+    }
+    const midiData = await (await fetch("/midi/song.mid")).arrayBuffer()
+    const midi = read(midiData)
+
+    exportPanel.innerHTML += "<p>Benchmark test started.</p>"
+    const startTime = performance.now()
+
+    const result = await exportAudio(midi, type)
+
+    if (result === undefined) {
+      return
+    }
+
+    const endTime = performance.now()
+    const songLength = result.length / result.sampleRate
+    const processTime = endTime - startTime
+    exportPanel.innerHTML += `
+      <p>Benchmark test completed.</p>
+      <ul>
+        <li>${
+          result.rightData.byteLength + result.leftData.byteLength
+        } bytes</li>
+        <li>${result.length} frames</li>
+        <li>${songLength} seconds</li>
+        <li>Take ${processTime} milliseconds</li>
+        <li>x${songLength / (processTime / 1000)} speed</li>
+      </ul>
+    `
+  }
+
+  benchmarkButton.addEventListener("click", async () => {
+    benchmark("mainthread")
+  })
+
+  workerBenchmarkButton.addEventListener("click", async () => {
+    benchmark("worker")
   })
 }
 

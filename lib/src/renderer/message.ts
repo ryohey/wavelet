@@ -8,6 +8,7 @@ export interface StartMessage {
   samples: LoadSampleEvent[]
   events: SynthEvent[]
   sampleRate: number
+  bufferSize?: number
 }
 
 export interface CancelMessage {

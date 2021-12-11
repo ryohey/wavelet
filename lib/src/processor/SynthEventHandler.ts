@@ -6,10 +6,11 @@ import {
   SynthEvent,
 } from "../SynthEvent"
 import { DistributiveOmit } from "../types"
+import { insertSorted } from "./insertSorted"
 import { logger } from "./logger"
 import { SynthProcessorCore } from "./SynthProcessorCore"
 
-type DelayedEvent = MIDIEvent & { receivedFrame: number; isProcessed: boolean }
+type DelayedEvent = MIDIEvent & { scheduledFrame: number }
 type RPNControllerEvent = DistributiveOmit<ControllerEvent, "deltaTime">
 
 interface RPN {
@@ -22,6 +23,7 @@ interface RPN {
 export class SynthEventHandler {
   private processor: SynthProcessorCore
   private scheduledEvents: DelayedEvent[] = []
+  private currentEvents: DelayedEvent[] = []
   private rpnEvents: { [channel: number]: RPN | undefined } = {}
   private bankSelectMSB: { [channel: number]: number | undefined } = {}
 
@@ -38,36 +40,41 @@ export class SynthEventHandler {
 
     if ("delayTime" in e) {
       // handle in process
-      this.scheduledEvents.push({
-        ...e,
-        receivedFrame: this.currentFrame,
-        isProcessed: false,
-      })
+      insertSorted(
+        this.scheduledEvents,
+        {
+          ...e,
+          scheduledFrame: this.currentFrame + e.delayTime,
+        },
+        "scheduledFrame"
+      )
     } else {
       this.handleImmediateEvent(e)
     }
   }
 
   processScheduledEvents() {
-    for (const e of this.scheduledEvents) {
-      if (
-        !e.isProcessed &&
-        e.receivedFrame + e.delayTime <= this.currentFrame
-      ) {
-        this.handleDelayableEvent(e.midi)
-        e.isProcessed = true
-      }
+    if (this.scheduledEvents.length === 0) {
+      return
     }
 
-    this.removeProcessedEvents()
-  }
-
-  private removeProcessedEvents() {
-    for (let i = this.scheduledEvents.length - 1; i >= 0; i--) {
-      const ev = this.scheduledEvents[i]
-      if (ev.isProcessed) {
-        this.scheduledEvents.splice(i, 1)
+    while (true) {
+      const e = this.scheduledEvents[0]
+      if (e === undefined || e.scheduledFrame > this.currentFrame) {
+        // scheduledEvents are sorted by scheduledFrame,
+        // so we can break early instead of iterating through all scheduledEvents,
+        break
       }
+      this.scheduledEvents.shift()
+      this.currentEvents.unshift(e)
+    }
+
+    while (true) {
+      const e = this.currentEvents.pop()
+      if (e === undefined) {
+        break
+      }
+      this.handleDelayableEvent(e.midi)
     }
   }
 
@@ -200,10 +207,11 @@ export class SynthEventHandler {
   }
 
   private removeScheduledEvents(channel: number) {
-    for (const e of this.scheduledEvents) {
-      if (e.midi.channel === channel) {
-        e.isProcessed = true
-      }
-    }
+    this.scheduledEvents = this.scheduledEvents.filter(
+      (e) => e.midi.channel !== channel
+    )
+    this.currentEvents = this.currentEvents.filter(
+      (e) => e.midi.channel !== channel
+    )
   }
 }

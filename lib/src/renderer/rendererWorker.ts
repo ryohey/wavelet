@@ -1,6 +1,7 @@
 import { InMessage } from ".."
+import { FastSleep } from "./FastSleep"
 import { CompleteMessage, ProgressMessage } from "./message"
-import { CancellationToken, renderAudio } from "./renderAudio"
+import { renderAudio } from "./renderAudio"
 
 declare global {
   function postMessage(
@@ -9,40 +10,32 @@ declare global {
   ): void
 }
 
-let cancel: CancellationToken | null = null
+let cancelled: boolean = false
+
+const fastSleep = new FastSleep()
 
 onmessage = async (e: MessageEvent<InMessage>) => {
   switch (e.data.type) {
     case "cancel": {
-      if (cancel !== null) {
-        cancel.cancelled = true
-      }
+      cancelled = true
       break
     }
     case "start": {
-      if (cancel !== null) {
-        throw new Error("rendering is already started.")
-      }
-
-      const { samples, events, sampleRate } = e.data
-
-      cancel = {
-        cancelled: false,
-      }
+      const { samples, events, sampleRate, bufferSize } = e.data
 
       try {
-        const audioData = await renderAudio(
-          samples,
-          events,
+        const audioData = await renderAudio(samples, events, {
           sampleRate,
-          (numBytes, totalBytes) =>
+          bufferSize,
+          cancel: () => cancelled,
+          waitForEventLoop: async () => await fastSleep.wait(),
+          onProgress: (numBytes, totalBytes) =>
             postMessage({
               type: "progress",
               numBytes,
               totalBytes,
             }),
-          cancel
-        )
+        })
         postMessage({ type: "complete", audioData }, [
           audioData.leftData,
           audioData.rightData,
