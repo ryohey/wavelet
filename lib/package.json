@@ -1,6 +1,6 @@
 {
   "name": "@ryohey/wavelet",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "A wavetable synthesizer that never stops the UI thread created by AudioWorklet.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

@@ -66,7 +66,7 @@ export class SynthEventHandler {
         break
       }
       this.scheduledEvents.shift()
-      this.currentEvents.unshift(e)
+      this.currentEvents.push(e)
     }
 
     while (true) {
