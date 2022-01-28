@@ -174,6 +174,9 @@ export class SynthEventHandler {
                 this.removeScheduledEvents(e.channel)
                 this.processor.allSoundsOff(e.channel)
                 break
+              case MIDIControlEvents.ALL_NOTES_OFF:
+                this.processor.allNotesOff(e.channel)
+                break
               case MIDIControlEvents.SUSTAIN:
                 this.processor.hold(e.channel, e.value)
                 break

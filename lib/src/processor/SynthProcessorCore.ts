@@ -170,6 +170,16 @@ export class SynthProcessorCore {
     }
   }
 
+  allNotesOff(channel: number) {
+    const state = this.getChannelState(channel)
+
+    for (const key in state.oscillators) {
+      for (const osc of state.oscillators[key]) {
+        osc.noteOff()
+      }
+    }
+  }
+
   hold(channel: number, value: number) {
     const hold = value >= 64
     const state = this.getChannelState(channel)
