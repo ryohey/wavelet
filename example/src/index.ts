@@ -81,6 +81,7 @@ const main = async () => {
   const fileInput = document.getElementById("open")!
   const playButton = document.getElementById("button-play")!
   const pauseButton = document.getElementById("button-pause")!
+  const stopButton = document.getElementById("button-stop")!
   const exportButton = document.getElementById("button-export")!
   const exportPanel = document.getElementById("export-panel")!
   const benchmarkButton = document.getElementById("button-benchmark")!
@@ -136,6 +137,10 @@ const main = async () => {
 
   pauseButton.addEventListener("click", () => {
     midiPlayer?.pause()
+  })
+
+  stopButton.addEventListener("click", () => {
+    midiPlayer?.stop()
   })
 
   const exportAudio = async (midi: MidiFile, type: "worker" | "mainthread") => {
