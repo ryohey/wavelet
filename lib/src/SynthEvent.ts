@@ -39,6 +39,8 @@ export type MIDIEventBody = DistributiveOmit<AnyChannelEvent, "deltaTime">
 export type MIDIEvent = {
   type: "midi"
   midi: MIDIEventBody
+  // Time to delay the playback of an event. Number of frames
+  // delayInSeconds = delayTime / sampleRate
   delayTime: number
 }
 

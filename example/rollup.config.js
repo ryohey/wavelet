@@ -1,4 +1,4 @@
-import copy from "@barusu/rollup-plugin-copy"
+import { copy } from "@guanghechen/rollup-plugin-copy"
 import commonjs from "@rollup/plugin-commonjs"
 import { nodeResolve } from "@rollup/plugin-node-resolve"
 import rollupTypescript from "@rollup/plugin-typescript"

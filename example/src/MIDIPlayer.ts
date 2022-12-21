@@ -72,6 +72,13 @@ export class MIDIPlayer {
     this.allSoundsOff()
   }
 
+  stop() {
+    this.pause()
+    this.resetControllers()
+    this.scheduler.seek(0)
+    this.onProgress?.(0)
+  }
+
   // 0: start, 1: end
   seek(position: number) {
     this.allSoundsOff()
