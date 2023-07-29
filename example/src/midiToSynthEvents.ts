@@ -17,20 +17,34 @@ function addTick(events: AnyEvent[], track: number): (AnyEvent & Tick)[] {
 const tickToMillisec = (tick: number, bpm: number, timebase: number) =>
   (tick / (timebase / 60) / bpm) * 1000
 
+interface Keyframe {
+  tick: number
+  bpm: number
+  timestamp: number
+}
+
 export const midiToSynthEvents = (
   midi: MidiFile,
   sampleRate: number
 ): SynthEvent[] => {
   const events = midi.tracks.flatMap(addTick).sort((a, b) => a.tick - b.tick)
-
-  let bpm = 120
+  let keyframe: Keyframe = {
+    tick: 0,
+    bpm: 120,
+    timestamp: 0,
+  }
 
   const synthEvents: SynthEvent[] = []
 
   // channel イベントを MIDI Output に送信
   // Send Channel Event to MIDI OUTPUT
   for (const e of events) {
-    const timestamp = tickToMillisec(e.tick, bpm, midi.header.ticksPerBeat)
+    const timestamp =
+      tickToMillisec(
+        e.tick - keyframe.tick,
+        keyframe.bpm,
+        midi.header.ticksPerBeat
+      ) + keyframe.timestamp
     const delayTime = (timestamp * sampleRate) / 1000
 
     switch (e.type) {
@@ -43,7 +57,11 @@ export const midiToSynthEvents = (
       case "meta":
         switch (e.subtype) {
           case "setTempo":
-            bpm = (60 * 1000000) / e.microsecondsPerBeat
+            keyframe = {
+              tick: e.tick,
+              bpm: (60 * 1000000) / e.microsecondsPerBeat,
+              timestamp,
+            }
             break
         }
     }
