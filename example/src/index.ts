@@ -45,10 +45,13 @@ const main = async () => {
 
   const loadSoundFont = async () => {
     soundFontData = await (await fetch(soundFontUrl)).arrayBuffer()
+
+    console.log("Parsing soundfont...")
     const parsed = getSamplesFromSoundFont(
       new Uint8Array(soundFontData),
       context
     )
+    console.log("Soundfont parsed.")
 
     for (const sample of parsed) {
       postSynthMessage(
