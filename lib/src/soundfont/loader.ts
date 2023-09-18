@@ -7,6 +7,7 @@ import {
   parse,
 } from "@ryohey/sf2parser"
 import { SampleData } from "../SynthEvent"
+import { getPresetZones } from "./getPresetZones"
 import { sampleToSynthEvent } from "./sampleToSynthEvent"
 
 export type SoundFontSample = SampleData<ArrayBuffer> & {
@@ -35,12 +36,10 @@ export const getSamplesFromSoundFont = (
     const presetHeader = parsed.presetHeaders[i]
     const presetGenerators = getPresetGenerators(parsed, i)
 
-    for (const lastPresetGenertor of presetGenerators.filter(
-      (gen) => gen.type === "instrument"
-    )) {
-      const presetZone = createGeneraterObject(presetGenerators)
+    const presetZones = getPresetZones(presetGenerators)
 
-      const instrumentID = lastPresetGenertor.value as number
+    for (const presetZone of presetZones.instruments) {
+      const instrumentID = presetZone.instrument
       const instrumentZones = getInstrumentGenerators(parsed, instrumentID).map(
         createGeneraterObject
       )
@@ -58,11 +57,17 @@ export const getSamplesFromSoundFont = (
         const sample = parsed.samples[zone.sampleID!]
         const sampleHeader = parsed.sampleHeaders[zone.sampleID!]
 
+        const { velRange: defaultVelRange, ...generatorDefault } =
+          defaultInstrumentZone
+
         const gen = {
-          ...defaultInstrumentZone,
+          ...generatorDefault,
           ...removeUndefined(globalInstrumentZone ?? {}),
           ...removeUndefined(zone),
         }
+
+        // inherit preset's velRange
+        gen.velRange = gen.velRange ?? presetZone.velRange ?? defaultVelRange
 
         // add presetGenerator value
         for (const key of Object.keys(gen) as (keyof GeneratorParams)[]) {

@@ -45,10 +45,13 @@ const main = async () => {
 
   const loadSoundFont = async () => {
     soundFontData = await (await fetch(soundFontUrl)).arrayBuffer()
+
+    console.log("Parsing soundfont...")
     const parsed = getSamplesFromSoundFont(
       new Uint8Array(soundFontData),
       context
     )
+    console.log("Soundfont parsed.")
 
     for (const sample of parsed) {
       postSynthMessage(
@@ -82,6 +85,7 @@ const main = async () => {
   const playButton = document.getElementById("button-play")!
   const pauseButton = document.getElementById("button-pause")!
   const stopButton = document.getElementById("button-stop")!
+  const exampleButton = document.getElementById("button-example")!
   const exportButton = document.getElementById("button-export")!
   const exportPanel = document.getElementById("export-panel")!
   const benchmarkButton = document.getElementById("button-benchmark")!
@@ -128,6 +132,12 @@ const main = async () => {
     const input = e.currentTarget as HTMLInputElement
     const file = input.files?.[0]
     reader.readAsArrayBuffer(file!)
+  })
+
+  exampleButton.addEventListener("click", async () => {
+    const midiData = await (await fetch("/midi/example.mid")).arrayBuffer()
+    midi = read(midiData)
+    playMIDI(midi)
   })
 
   playButton.addEventListener("click", () => {
