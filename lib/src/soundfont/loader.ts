@@ -99,7 +99,7 @@ export const getSamplesFromSoundFont = (data: Uint8Array) => {
           gen.endloopAddrsCoarseOffset * 32768 +
           gen.endloopAddrsOffset
 
-        const sample2 = sample.subarray(0, sample.length + sampleEnd)
+        const sample2 = sample.subarray(0, sample.length)
         const audioData = new Float32Array(sample2.length)
 
         sample2.forEach((v, i) => {
