@@ -99,12 +99,11 @@ export const getSamplesFromSoundFont = (data: Uint8Array) => {
           gen.endloopAddrsCoarseOffset * 32768 +
           gen.endloopAddrsOffset
 
-        const sample2 = sample.subarray(0, sample.length)
-        const audioData = new Float32Array(sample2.length)
+        const audioData = new Float32Array(sample.length)
 
-        sample2.forEach((v, i) => {
-          audioData[i] = v / 32767
-        })
+        for (let i = 0; i < sample.length; i++) {
+          audioData[i] = sample[i] / 32767
+        }
 
         const amplitudeEnvelope = {
           attackTime: timeCentToSec(gen.attackVolEnv),
