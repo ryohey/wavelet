@@ -44,14 +44,19 @@ const main = async () => {
   }
 
   const loadSoundFont = async () => {
+    let startDate = Date.now()
+    console.log("Loading soundfont...")
     soundFontData = await (await fetch(soundFontUrl)).arrayBuffer()
-
-    console.log("Parsing soundfont...")
-    const parsed = getSamplesFromSoundFont(
-      new Uint8Array(soundFontData),
-      context
+    console.log(
+      `Soundfont loaded. (${Date.now() - startDate}ms, ${
+        soundFontData.byteLength
+      } bytes)`
     )
-    console.log("Soundfont parsed.")
+
+    startDate = Date.now()
+    console.log("Parsing soundfont...")
+    const parsed = getSamplesFromSoundFont(new Uint8Array(soundFontData))
+    console.log(`Soundfont parsed. (${Date.now() - startDate}ms)`)
 
     for (const sample of parsed) {
       postSynthMessage(
@@ -157,10 +162,7 @@ const main = async () => {
     if (soundFontData === null) {
       return
     }
-    const samples = getSamplesFromSoundFont(
-      new Uint8Array(soundFontData),
-      context
-    )
+    const samples = getSamplesFromSoundFont(new Uint8Array(soundFontData))
     const sampleRate = 44100
     const events = midiToSynthEvents(midi, sampleRate)
 
@@ -195,10 +197,7 @@ const main = async () => {
           return
         }
         const worker = new Worker("/js/rendererWorker.js")
-        const samples = getSamplesFromSoundFont(
-          new Uint8Array(soundFontData),
-          context
-        )
+        const samples = getSamplesFromSoundFont(new Uint8Array(soundFontData))
         const sampleRate = 44100
         const events = midiToSynthEvents(midi, sampleRate)
         const message: StartMessage = {

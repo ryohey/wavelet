@@ -25,10 +25,7 @@ export interface BufferCreator {
   ): AudioBuffer
 }
 
-export const getSamplesFromSoundFont = (
-  data: Uint8Array,
-  ctx: BufferCreator
-) => {
+export const getSamplesFromSoundFont = (data: Uint8Array) => {
   const parsed = parse(data)
   const result: SoundFontSample[] = []
 
@@ -103,13 +100,8 @@ export const getSamplesFromSoundFont = (
           gen.endloopAddrsOffset
 
         const sample2 = sample.subarray(0, sample.length + sampleEnd)
+        const audioData = new Float32Array(sample2.length)
 
-        const audioBuffer = ctx.createBuffer(
-          1,
-          sample2.length,
-          sampleHeader.sampleRate
-        )
-        const audioData = audioBuffer.getChannelData(0)
         sample2.forEach((v, i) => {
           audioData[i] = v / 32767
         })
