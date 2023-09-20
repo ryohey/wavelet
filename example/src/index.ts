@@ -2,7 +2,7 @@ import {
   AudioData,
   audioDataToAudioBuffer,
   CancelMessage,
-  getSamplesFromSoundFont,
+  getSampleEventsFromSoundFont,
   OutMessage,
   renderAudio,
   StartMessage,
@@ -13,7 +13,8 @@ import { encode } from "wav-encoder"
 import { MIDIPlayer } from "./MIDIPlayer"
 import { midiToSynthEvents } from "./midiToSynthEvents"
 
-const soundFontUrl = "soundfonts/A320U.sf2"
+// const soundFontUrl = "soundfonts/A320U.sf2"
+const soundFontUrl = "soundfonts/SGM-V2.01.sf2"
 
 const Sleep = (time: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, time))
@@ -55,14 +56,13 @@ const main = async () => {
 
     startDate = Date.now()
     console.log("Parsing soundfont...")
-    const parsed = getSamplesFromSoundFont(new Uint8Array(soundFontData))
+    const sampleEvents = getSampleEventsFromSoundFont(
+      new Uint8Array(soundFontData)
+    )
     console.log(`Soundfont parsed. (${Date.now() - startDate}ms)`)
 
-    for (const sample of parsed) {
-      postSynthMessage(
-        sample,
-        [sample.sample.buffer] // transfer instead of copy
-      )
+    for (const event of sampleEvents) {
+      postSynthMessage(event.event, event.transfer)
     }
   }
 
@@ -162,7 +162,9 @@ const main = async () => {
     if (soundFontData === null) {
       return
     }
-    const samples = getSamplesFromSoundFont(new Uint8Array(soundFontData))
+    const sampleEvents = getSampleEventsFromSoundFont(
+      new Uint8Array(soundFontData)
+    )
     const sampleRate = 44100
     const events = midiToSynthEvents(midi, sampleRate)
 
@@ -177,14 +179,18 @@ const main = async () => {
       cancelButton.onclick = () => (cancel = true)
       exportPanel.appendChild(cancelButton)
 
-      const result = await renderAudio(samples, events, {
-        sampleRate,
-        bufferSize: 256,
-        cancel: () => cancel,
-        waitForEventLoop: waitForAnimationFrame,
-        onProgress: (numFrames, totalFrames) =>
-          (progress.value = numFrames / totalFrames),
-      })
+      const result = await renderAudio(
+        sampleEvents.map((event) => event.event),
+        events,
+        {
+          sampleRate,
+          bufferSize: 256,
+          cancel: () => cancel,
+          waitForEventLoop: waitForAnimationFrame,
+          onProgress: (numFrames, totalFrames) =>
+            (progress.value = numFrames / totalFrames),
+        }
+      )
 
       cancelButton.remove()
 
@@ -197,12 +203,14 @@ const main = async () => {
           return
         }
         const worker = new Worker("/js/rendererWorker.js")
-        const samples = getSamplesFromSoundFont(new Uint8Array(soundFontData))
+        const sampleEvents = getSampleEventsFromSoundFont(
+          new Uint8Array(soundFontData)
+        )
         const sampleRate = 44100
         const events = midiToSynthEvents(midi, sampleRate)
         const message: StartMessage = {
           type: "start",
-          samples,
+          samples: sampleEvents.map((e) => e.event),
           events,
           sampleRate,
           bufferSize: 128,

@@ -6,9 +6,9 @@ import {
   SynthEvent,
 } from "../SynthEvent"
 import { DistributiveOmit } from "../types"
+import { SynthProcessorCore } from "./SynthProcessorCore"
 import { insertSorted } from "./insertSorted"
 import { logger } from "./logger"
-import { SynthProcessorCore } from "./SynthProcessorCore"
 
 type DelayedEvent = MIDIEvent & { scheduledFrame: number }
 type RPNControllerEvent = DistributiveOmit<ControllerEvent, "deltaTime">
@@ -80,14 +80,11 @@ export class SynthEventHandler {
 
   handleImmediateEvent(e: ImmediateEvent) {
     switch (e.type) {
+      case "sampleParameter":
+        this.processor.addSampleParameter(e.parameter, e.range)
+        break
       case "loadSample":
-        this.processor.loadSample(
-          e.sample,
-          e.bank,
-          e.instrument,
-          e.keyRange,
-          e.velRange
-        )
+        this.processor.addSample(e.data, e.sampleID)
         break
     }
   }

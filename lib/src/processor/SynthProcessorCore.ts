@@ -1,6 +1,6 @@
-import { SampleData, SynthEvent } from "../SynthEvent"
+import { SampleParameter, SampleRange, SynthEvent } from "../SynthEvent"
 import { logger } from "./logger"
-import { SampleTable } from "./SampleTable"
+import { Sample, SampleTable } from "./SampleTable"
 import { SynthEventHandler } from "./SynthEventHandler"
 import { WavetableOscillator } from "./WavetableOscillator"
 
@@ -33,8 +33,6 @@ const initialChannelState = (): ChannelState => ({
 const RHYTHM_CHANNEL = 9
 const RHYTHM_BANK = 128
 
-type Sample = SampleData<Float32Array>
-
 export class SynthProcessorCore {
   private sampleTable = new SampleTable()
   private channels: { [key: number]: ChannelState } = {}
@@ -63,18 +61,12 @@ export class SynthProcessorCore {
     return this.sampleTable.getSamples(bank, state.instrument, pitch, velocity)
   }
 
-  loadSample(
-    sample: SampleData<ArrayBuffer>,
-    bank: number,
-    instrument: number,
-    keyRange: [number, number],
-    velRange: [number, number]
-  ) {
-    const _sample: Sample = {
-      ...sample,
-      buffer: new Float32Array(sample.buffer),
-    }
-    this.sampleTable.addSample(_sample, bank, instrument, keyRange, velRange)
+  addSample(data: ArrayBuffer, sampleID: number) {
+    this.sampleTable.addSample(new Float32Array(data), sampleID)
+  }
+
+  addSampleParameter(parameter: SampleParameter, range: SampleRange) {
+    this.sampleTable.addSampleParameter(parameter, range)
   }
 
   addEvent(e: SynthEvent) {
