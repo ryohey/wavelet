@@ -8,7 +8,7 @@
   "scripts": {
     "start": "rollup --config --watch",
     "build": "rollup --config",
-    "test": "jest"
+    "test": "jest --roots ./src"
   },
   "author": "ryohey",
   "license": "MIT",
