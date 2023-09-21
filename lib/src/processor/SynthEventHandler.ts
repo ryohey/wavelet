@@ -1,16 +1,9 @@
 import { ControllerEvent, MIDIControlEvents } from "midifile-ts"
-import {
-  ImmediateEvent,
-  MIDIEvent,
-  MIDIEventBody,
-  SynthEvent,
-} from "../SynthEvent"
+import { ImmediateEvent, MIDIEventBody } from "../SynthEvent"
 import { DistributiveOmit } from "../types"
-import { insertSorted } from "./insertSorted"
-import { logger } from "./logger"
 import { SynthProcessorCore } from "./SynthProcessorCore"
+import { logger } from "./logger"
 
-type DelayedEvent = MIDIEvent & { scheduledFrame: number }
 type RPNControllerEvent = DistributiveOmit<ControllerEvent, "deltaTime">
 
 interface RPN {
@@ -21,73 +14,18 @@ interface RPN {
 }
 
 export class SynthEventHandler {
-  private processor: SynthProcessorCore
-  private scheduledEvents: DelayedEvent[] = []
-  private currentEvents: DelayedEvent[] = []
   private rpnEvents: { [channel: number]: RPN | undefined } = {}
   private bankSelectMSB: { [channel: number]: number | undefined } = {}
 
-  constructor(processor: SynthProcessorCore) {
-    this.processor = processor
-  }
-
-  private get currentFrame(): number {
-    return this.processor.currentFrame
-  }
-
-  addEvent(e: SynthEvent) {
-    logger.log(e)
-
-    if ("delayTime" in e) {
-      // handle in process
-      insertSorted(
-        this.scheduledEvents,
-        {
-          ...e,
-          scheduledFrame: this.currentFrame + e.delayTime,
-        },
-        "scheduledFrame"
-      )
-    } else {
-      this.handleImmediateEvent(e)
-    }
-  }
-
-  processScheduledEvents() {
-    if (this.scheduledEvents.length === 0) {
-      return
-    }
-
-    while (true) {
-      const e = this.scheduledEvents[0]
-      if (e === undefined || e.scheduledFrame > this.currentFrame) {
-        // scheduledEvents are sorted by scheduledFrame,
-        // so we can break early instead of iterating through all scheduledEvents,
-        break
-      }
-      this.scheduledEvents.shift()
-      this.currentEvents.push(e)
-    }
-
-    while (true) {
-      const e = this.currentEvents.pop()
-      if (e === undefined) {
-        break
-      }
-      this.handleDelayableEvent(e.midi)
-    }
-  }
+  constructor(private readonly processor: SynthProcessorCore) {}
 
   handleImmediateEvent(e: ImmediateEvent) {
     switch (e.type) {
+      case "sampleParameter":
+        this.processor.addSampleParameter(e.parameter, e.range)
+        break
       case "loadSample":
-        this.processor.loadSample(
-          e.sample,
-          e.bank,
-          e.instrument,
-          e.keyRange,
-          e.velRange
-        )
+        this.processor.addSample(e.data, e.sampleID)
         break
     }
   }
@@ -171,7 +109,6 @@ export class SynthEventHandler {
                 this.processor.expression(e.channel, e.value)
                 break
               case MIDIControlEvents.ALL_SOUNDS_OFF:
-                this.removeScheduledEvents(e.channel)
                 this.processor.allSoundsOff(e.channel)
                 break
               case MIDIControlEvents.ALL_NOTES_OFF:
@@ -207,14 +144,5 @@ export class SynthEventHandler {
         break
       }
     }
-  }
-
-  private removeScheduledEvents(channel: number) {
-    this.scheduledEvents = this.scheduledEvents.filter(
-      (e) => e.midi.channel !== channel
-    )
-    this.currentEvents = this.currentEvents.filter(
-      (e) => e.midi.channel !== channel
-    )
   }
 }

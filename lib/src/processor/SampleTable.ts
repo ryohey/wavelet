@@ -1,36 +1,44 @@
-import { SampleData } from "../SynthEvent"
+import { SampleParameter, SampleRange } from "../SynthEvent"
 
-type Sample = SampleData<Float32Array>
-
-export type SampleTableItem = Sample & {
+export type SampleTableItem = SampleParameter & {
   velRange: [number, number]
+}
+
+export type Sample = SampleParameter & {
+  buffer: ArrayBuffer
 }
 
 export class SampleTable {
   private samples: {
+    [sampleID: number]: Float32Array
+  } = {}
+
+  private sampleParameters: {
     [bank: number]: {
       [instrument: number]: { [pitch: number]: SampleTableItem[] }
     }
   } = {}
 
-  addSample(
-    sample: Sample,
-    bank: number,
-    instrument: number,
-    keyRange: [number, number],
-    velRange: [number, number]
-  ) {
+  addSample(data: Float32Array, sampleID: number) {
+    this.samples[sampleID] = data
+  }
+
+  addSampleParameter(parameter: SampleParameter, range: SampleRange) {
+    const { bank, instrument, keyRange, velRange } = range
     for (let i = keyRange[0]; i <= keyRange[1]; i++) {
-      if (this.samples[bank] === undefined) {
-        this.samples[bank] = {}
+      if (this.sampleParameters[bank] === undefined) {
+        this.sampleParameters[bank] = {}
       }
-      if (this.samples[bank][instrument] === undefined) {
-        this.samples[bank][instrument] = {}
+      if (this.sampleParameters[bank][instrument] === undefined) {
+        this.sampleParameters[bank][instrument] = {}
       }
-      if (this.samples[bank][instrument][i] === undefined) {
-        this.samples[bank][instrument][i] = []
+      if (this.sampleParameters[bank][instrument][i] === undefined) {
+        this.sampleParameters[bank][instrument][i] = []
       }
-      this.samples[bank][instrument][i].push({ ...sample, velRange })
+      this.sampleParameters[bank][instrument][i].push({
+        ...parameter,
+        velRange,
+      })
     }
   }
 
@@ -40,11 +48,25 @@ export class SampleTable {
     pitch: number,
     velocity: number
   ): Sample[] {
-    const samples = this.samples?.[bank]?.[instrument]?.[pitch]
-    return (
-      samples?.filter(
+    const parameters =
+      this.sampleParameters?.[bank]?.[instrument]?.[pitch]?.filter(
         (s) => velocity >= s.velRange[0] && velocity <= s.velRange[1]
       ) ?? []
-    )
+
+    const samples: Sample[] = []
+
+    for (const parameter of parameters) {
+      const buffer = this.samples[parameter.sampleID]
+      if (buffer === undefined) {
+        console.warn(`sample not found: ${parameter.sampleID}`)
+        continue
+      }
+      samples.push({
+        ...parameter,
+        buffer,
+      })
+    }
+
+    return samples
   }
 }

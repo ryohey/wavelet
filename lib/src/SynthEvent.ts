@@ -7,9 +7,9 @@ export interface SampleLoop {
   end: number
 }
 
-export interface SampleData<BufferType> {
+export interface SampleParameter {
   name: string
-  buffer: BufferType
+  sampleID: number
   pitch: number
   loop: SampleLoop | null
   sampleStart: number
@@ -25,13 +25,23 @@ export interface SampleData<BufferType> {
   volume: number // 0 to 1
 }
 
-export interface LoadSampleEvent {
-  type: "loadSample"
-  sample: SampleData<ArrayBuffer>
+export interface SampleRange {
   bank: number
   instrument: number // GM Patch Number
   keyRange: [number, number]
   velRange: [number, number]
+}
+
+export interface LoadSampleEvent {
+  type: "loadSample"
+  data: ArrayBuffer
+  sampleID: number
+}
+
+export interface SampleParameterEvent {
+  type: "sampleParameter"
+  parameter: SampleParameter
+  range: SampleRange
 }
 
 export type MIDIEventBody = DistributiveOmit<AnyChannelEvent, "deltaTime">
@@ -44,7 +54,7 @@ export type MIDIEvent = {
   delayTime: number
 }
 
-export type ImmediateEvent = LoadSampleEvent
+export type ImmediateEvent = LoadSampleEvent | SampleParameterEvent
 export type SynthEvent = ImmediateEvent | MIDIEvent
 
 export const DrumInstrumentNumber = 128

@@ -1,7 +1,8 @@
-import { SampleData, SynthEvent } from "../SynthEvent"
+import { SampleParameter, SampleRange, SynthEvent } from "../SynthEvent"
 import { logger } from "./logger"
-import { SampleTable } from "./SampleTable"
+import { Sample, SampleTable } from "./SampleTable"
 import { SynthEventHandler } from "./SynthEventHandler"
+import { SynthEventScheduler } from "./SynthEventScheduler"
 import { WavetableOscillator } from "./WavetableOscillator"
 
 interface ChannelState {
@@ -33,17 +34,21 @@ const initialChannelState = (): ChannelState => ({
 const RHYTHM_CHANNEL = 9
 const RHYTHM_BANK = 128
 
-type Sample = SampleData<Float32Array>
-
 export class SynthProcessorCore {
   private sampleTable = new SampleTable()
   private channels: { [key: number]: ChannelState } = {}
-  private readonly eventHandler: SynthEventHandler
-  private readonly sampleRate: number
-  private readonly getCurrentFrame: () => number
+  private readonly eventScheduler: SynthEventScheduler
 
-  constructor(sampleRate: number, getCurrentFrame: () => number) {
-    this.eventHandler = new SynthEventHandler(this)
+  constructor(
+    private readonly sampleRate: number,
+    private readonly getCurrentFrame: () => number
+  ) {
+    const eventHandler = new SynthEventHandler(this)
+    this.eventScheduler = new SynthEventScheduler(
+      getCurrentFrame,
+      (e) => eventHandler.handleImmediateEvent(e),
+      (e) => eventHandler.handleDelayableEvent(e)
+    )
     this.sampleRate = sampleRate
     this.getCurrentFrame = getCurrentFrame
   }
@@ -63,22 +68,16 @@ export class SynthProcessorCore {
     return this.sampleTable.getSamples(bank, state.instrument, pitch, velocity)
   }
 
-  loadSample(
-    sample: SampleData<ArrayBuffer>,
-    bank: number,
-    instrument: number,
-    keyRange: [number, number],
-    velRange: [number, number]
-  ) {
-    const _sample: Sample = {
-      ...sample,
-      buffer: new Float32Array(sample.buffer),
-    }
-    this.sampleTable.addSample(_sample, bank, instrument, keyRange, velRange)
+  addSample(data: ArrayBuffer, sampleID: number) {
+    this.sampleTable.addSample(new Float32Array(data), sampleID)
+  }
+
+  addSampleParameter(parameter: SampleParameter, range: SampleRange) {
+    this.sampleTable.addSampleParameter(parameter, range)
   }
 
   addEvent(e: SynthEvent) {
-    this.eventHandler.addEvent(e)
+    this.eventScheduler.addEvent(e)
   }
 
   noteOn(channel: number, pitch: number, velocity: number) {
@@ -161,6 +160,7 @@ export class SynthProcessorCore {
   }
 
   allSoundsOff(channel: number) {
+    this.eventScheduler.removeScheduledEvents(channel)
     const state = this.getChannelState(channel)
 
     for (const key in state.oscillators) {
@@ -228,7 +228,7 @@ export class SynthProcessorCore {
   }
 
   process(outputs: Float32Array[]): void {
-    this.eventHandler.processScheduledEvents()
+    this.eventScheduler.processScheduledEvents()
 
     for (const channel in this.channels) {
       const state = this.channels[channel]

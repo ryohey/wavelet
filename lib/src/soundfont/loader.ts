@@ -6,16 +6,13 @@ import {
   getPresetGenerators,
   parse,
 } from "@ryohey/sf2parser"
-import { SampleData } from "../SynthEvent"
+import {
+  LoadSampleEvent,
+  SampleParameter,
+  SampleParameterEvent,
+  SampleRange,
+} from "../SynthEvent"
 import { getPresetZones } from "./getPresetZones"
-import { sampleToSynthEvent } from "./sampleToSynthEvent"
-
-export type SoundFontSample = SampleData<ArrayBuffer> & {
-  bank: number
-  instrument: number
-  keyRange: [number, number]
-  velRange: [number, number]
-}
 
 export interface BufferCreator {
   createBuffer(
@@ -25,12 +22,26 @@ export interface BufferCreator {
   ): AudioBuffer
 }
 
-export const getSamplesFromSoundFont = (
-  data: Uint8Array,
-  ctx: BufferCreator
-) => {
+const parseSamplesFromSoundFont = (data: Uint8Array) => {
   const parsed = parse(data)
-  const result: SoundFontSample[] = []
+  const result: { parameter: SampleParameter; range: SampleRange }[] = []
+  const convertedSampleBuffers: { [key: number]: Float32Array } = {}
+
+  function addSampleIfNeeded(sampleID: number) {
+    const cached = convertedSampleBuffers[sampleID]
+    if (cached) {
+      return cached
+    }
+
+    const sample = parsed.samples[sampleID]
+    const audioData = new Float32Array(sample.length)
+    for (let i = 0; i < sample.length; i++) {
+      audioData[i] = sample[i] / 32767
+    }
+
+    convertedSampleBuffers[sampleID] = audioData
+    return audioData
+  }
 
   for (let i = 0; i < parsed.presetHeaders.length; i++) {
     const presetHeader = parsed.presetHeaders[i]
@@ -54,8 +65,8 @@ export const getSamplesFromSoundFont = (
       for (const zone of instrumentZones.filter(
         (zone) => zone.sampleID !== undefined
       )) {
-        const sample = parsed.samples[zone.sampleID!]
-        const sampleHeader = parsed.sampleHeaders[zone.sampleID!]
+        const sampleID = zone.sampleID!
+        const sampleHeader = parsed.sampleHeaders[sampleID]
 
         const { velRange: defaultVelRange, ...generatorDefault } =
           defaultInstrumentZone
@@ -102,17 +113,7 @@ export const getSamplesFromSoundFont = (
           gen.endloopAddrsCoarseOffset * 32768 +
           gen.endloopAddrsOffset
 
-        const sample2 = sample.subarray(0, sample.length + sampleEnd)
-
-        const audioBuffer = ctx.createBuffer(
-          1,
-          sample2.length,
-          sampleHeader.sampleRate
-        )
-        const audioData = audioBuffer.getChannelData(0)
-        sample2.forEach((v, i) => {
-          audioData[i] = v / 32767
-        })
+        const audioData = addSampleIfNeeded(sampleID)
 
         const amplitudeEnvelope = {
           attackTime: timeCentToSec(gen.attackVolEnv),
@@ -121,8 +122,8 @@ export const getSamplesFromSoundFont = (
           releaseTime: timeCentToSec(gen.releaseVolEnv) / 4,
         }
 
-        result.push({
-          buffer: audioData.buffer,
+        const parameter: SampleParameter = {
+          sampleID: sampleID,
           pitch: -basePitch,
           name: sampleHeader.sampleName,
           sampleStart,
@@ -134,22 +135,56 @@ export const getSamplesFromSoundFont = (
                   end: loopEnd,
                 }
               : null,
-          instrument: presetHeader.preset,
-          bank: presetHeader.bank,
-          keyRange: [gen.keyRange.lo, gen.keyRange.hi],
-          velRange: [gen.velRange.lo, gen.velRange.hi],
           sampleRate: sampleHeader.sampleRate,
           amplitudeEnvelope,
           scaleTuning: gen.scaleTuning / 100,
           pan: (gen.pan ?? 0) / 500,
           exclusiveClass: gen.exclusiveClass,
           volume: 1 - gen.initialAttenuation / 1000,
-        })
+        }
+
+        const range: SampleRange = {
+          instrument: presetHeader.preset,
+          bank: presetHeader.bank,
+          keyRange: [gen.keyRange.lo, gen.keyRange.hi],
+          velRange: [gen.velRange.lo, gen.velRange.hi],
+        }
+
+        result.push({ parameter, range })
       }
     }
   }
 
-  return result.map(sampleToSynthEvent)
+  return {
+    parameters: result,
+    samples: convertedSampleBuffers,
+  }
+}
+
+export const getSampleEventsFromSoundFont = (
+  data: Uint8Array
+): {
+  event: LoadSampleEvent | SampleParameterEvent
+  transfer?: Transferable[]
+}[] => {
+  const { samples, parameters } = parseSamplesFromSoundFont(data)
+
+  const loadSampleEvents: LoadSampleEvent[] = Object.entries(samples).map(
+    ([key, value]) => ({
+      type: "loadSample",
+      sampleID: Number(key),
+      data: value.buffer,
+    })
+  )
+
+  const sampleParameterEvents: SampleParameterEvent[] = parameters.map(
+    ({ parameter, range }) => ({ type: "sampleParameter", parameter, range })
+  )
+
+  return [
+    ...loadSampleEvents.map((event) => ({ event, transfer: [event.data] })),
+    ...sampleParameterEvents.map((event) => ({ event })),
+  ]
 }
 
 function convertTime(value: number) {

@@ -1,4 +1,9 @@
-import { AudioData, LoadSampleEvent, SynthEvent } from ".."
+import {
+  AudioData,
+  LoadSampleEvent,
+  SampleParameterEvent,
+  SynthEvent,
+} from ".."
 import { SynthProcessorCore } from "../processor/SynthProcessorCore"
 
 // returns in frame unit
@@ -26,7 +31,7 @@ const isArrayZero = <T>(arr: ArrayLike<T>) => {
 }
 
 export const renderAudio = async (
-  samples: LoadSampleEvent[],
+  samples: (LoadSampleEvent | SampleParameterEvent)[],
   events: SynthEvent[],
   options?: RenderAudioOptions
 ): Promise<AudioData> => {

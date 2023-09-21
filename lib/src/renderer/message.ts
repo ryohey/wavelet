@@ -1,11 +1,15 @@
-import { LoadSampleEvent, SynthEvent } from "../SynthEvent"
+import {
+  LoadSampleEvent,
+  SampleParameterEvent,
+  SynthEvent,
+} from "../SynthEvent"
 
 export type InMessage = StartMessage | CancelMessage
 export type OutMessage = ProgressMessage | CompleteMessage
 
 export interface StartMessage {
   type: "start"
-  samples: LoadSampleEvent[]
+  samples: (LoadSampleEvent | SampleParameterEvent)[]
   events: SynthEvent[]
   sampleRate: number
   bufferSize?: number
