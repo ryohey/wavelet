@@ -58,7 +58,7 @@ export class SynthEventScheduler {
     }
 
     while (true) {
-      const e = this.currentEvents.pop()
+      const e = this.currentEvents.shift()
       if (e === undefined) {
         break
       }
