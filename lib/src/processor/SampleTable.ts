@@ -5,7 +5,7 @@ export type SampleTableItem = SampleParameter & {
 }
 
 export type Sample = SampleParameter & {
-  buffer: ArrayBuffer
+  buffer: Float32Array
 }
 
 export class SampleTable {
