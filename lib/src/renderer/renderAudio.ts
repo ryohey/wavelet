@@ -41,8 +41,13 @@ export const renderAudio = async (
 
   const synth = new SynthProcessorCore(sampleRate, () => currentFrame)
 
-  samples.forEach((e) => synth.addEvent(e))
-  events.forEach((e) => synth.addEvent(e))
+  let sequenceNumber = 0
+  samples.forEach((e) =>
+    synth.addEvent({ ...e, sequenceNumber: sequenceNumber++ })
+  )
+  events.forEach((e) =>
+    synth.addEvent({ ...e, sequenceNumber: sequenceNumber++ })
+  )
 
   const songLengthFrame = getSongLength(events)
   const iterCount = Math.ceil(songLengthFrame / bufSize)
