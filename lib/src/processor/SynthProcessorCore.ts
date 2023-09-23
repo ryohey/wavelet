@@ -76,7 +76,7 @@ export class SynthProcessorCore {
     this.sampleTable.addSampleParameter(parameter, range)
   }
 
-  addEvent(e: SynthEvent) {
+  addEvent(e: SynthEvent & { sequenceNumber: number }) {
     this.eventScheduler.addEvent(e)
   }
 

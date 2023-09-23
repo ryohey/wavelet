@@ -40,8 +40,13 @@ const main = async () => {
     synth.connect(context.destination)
   }
 
+  let sequenceNumber = 0
+
   const postSynthMessage = (e: SynthEvent, transfer?: Transferable[]) => {
-    synth.port.postMessage(e, transfer ?? [])
+    synth.port.postMessage(
+      { ...e, sequenceNumber: sequenceNumber++ },
+      transfer ?? []
+    )
   }
 
   const loadSoundFont = async () => {

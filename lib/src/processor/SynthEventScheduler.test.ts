@@ -21,6 +21,7 @@ describe("SynthEventScheduler", () => {
         velocity: 100,
       },
       delayTime: 10,
+      sequenceNumber: 0,
     })
     scheduler.addEvent({
       type: "midi",
@@ -32,6 +33,7 @@ describe("SynthEventScheduler", () => {
         velocity: 0,
       },
       delayTime: 100,
+      sequenceNumber: 1,
     })
     scheduler.addEvent({
       type: "midi",
@@ -43,6 +45,7 @@ describe("SynthEventScheduler", () => {
         velocity: 100,
       },
       delayTime: 101, // This event should be ignored in first process
+      sequenceNumber: 2,
     })
     currentFrame = 100
     scheduler.processScheduledEvents()

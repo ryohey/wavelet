@@ -1,9 +1,9 @@
-import { SampleData } from "../SynthEvent"
 import { AmplitudeEnvelope } from "./AmplitudeEnvelope"
 import { LFO } from "./LFO"
+import { Sample } from "./SampleTable"
 
 export class WavetableOscillator {
-  readonly sample: SampleData<Float32Array>
+  readonly sample: Sample
   private sampleIndex = 0
   private _isPlaying = false
   private _isNoteOff = false
@@ -29,7 +29,7 @@ export class WavetableOscillator {
   // This oscillator should be note off when hold pedal off
   isHold = false
 
-  constructor(sample: SampleData<Float32Array>, sampleRate: number) {
+  constructor(sample: Sample, sampleRate: number) {
     this.sample = sample
     this.sampleRate = sampleRate
     this.envelope = new AmplitudeEnvelope(sample.amplitudeEnvelope, sampleRate)

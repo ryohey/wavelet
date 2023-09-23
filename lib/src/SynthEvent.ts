@@ -57,4 +57,10 @@ export type MIDIEvent = {
 export type ImmediateEvent = LoadSampleEvent | SampleParameterEvent
 export type SynthEvent = ImmediateEvent | MIDIEvent
 
+// the type to be sent by postMessage
+export type SynthMessage = SynthEvent & {
+  // A number assigned to each message to ensure the order in which they are sent is preserved upon reception.
+  sequenceNumber: number
+}
+
 export const DrumInstrumentNumber = 128
