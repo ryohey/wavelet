@@ -13,7 +13,7 @@
   "author": "ryohey",
   "license": "MIT",
   "dependencies": {
-    "@ryohey/sf2parser": "^1.2.0",
+    "@ryohey/sf2parser": "^1.2.1",
     "midifile-ts": "^1.5.1"
   },
   "devDependencies": {
