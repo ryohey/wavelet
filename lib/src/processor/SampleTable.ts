@@ -48,8 +48,13 @@ export class SampleTable {
     pitch: number,
     velocity: number
   ): Sample[] {
+    const instrumentParameters =
+      this.sampleParameters[bank]?.[instrument] ??
+      this.sampleParameters[0]?.[instrument] ?? // fallback to bank 0
+      null
+
     const parameters =
-      this.sampleParameters?.[bank]?.[instrument]?.[pitch]?.filter(
+      instrumentParameters?.[pitch]?.filter(
         (s) => velocity >= s.velRange[0] && velocity <= s.velRange[1]
       ) ?? []
 
