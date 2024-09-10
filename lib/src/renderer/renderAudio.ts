@@ -4,11 +4,12 @@ import {
   SampleParameterEvent,
   SynthEvent,
 } from ".."
+import { max } from "../helper/math"
 import { SynthProcessorCore } from "../processor/SynthProcessorCore"
 
 // returns in frame unit
 const getSongLength = (events: SynthEvent[]) =>
-  Math.max(...events.map((e) => (e.type === "midi" ? e.delayTime : 0)))
+  max(events.map((e) => (e.type === "midi" ? e.delayTime : 0))) ?? 0
 
 // Maximum time to wait for the note release sound to become silent
 const silentTimeoutSec = 5

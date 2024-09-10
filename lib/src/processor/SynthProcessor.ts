@@ -1,4 +1,4 @@
-import { SynthEvent } from ".."
+import { SynthMessage } from ".."
 import { SynthProcessorCore } from "./SynthProcessorCore"
 
 export class SynthProcessor extends AudioWorkletProcessor {
@@ -10,7 +10,7 @@ export class SynthProcessor extends AudioWorkletProcessor {
   constructor() {
     super()
 
-    this.port.onmessage = (e: MessageEvent<SynthEvent>) => {
+    this.port.onmessage = (e: MessageEvent<SynthMessage>) => {
       this.synth.addEvent(e.data)
     }
   }
