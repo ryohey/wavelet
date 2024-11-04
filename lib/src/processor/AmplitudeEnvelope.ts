@@ -7,7 +7,9 @@ export interface AmplitudeEnvelopeParameter {
 }
 
 enum EnvelopePhase {
+  trigger, // just 1 frame after note on
   attack,
+  attackToHold,
   hold,
   decay,
   sustain,
@@ -20,7 +22,7 @@ const forceStopReleaseTime = 0.1
 
 export class AmplitudeEnvelope {
   private readonly parameter: AmplitudeEnvelopeParameter
-  private phase = EnvelopePhase.attack
+  private phase = EnvelopePhase.stopped
   private holdPhaseTime = 0
   private lastAmplitude = 0
   private readonly sampleRate: number
@@ -31,12 +33,22 @@ export class AmplitudeEnvelope {
   }
 
   noteOn() {
-    this.phase = EnvelopePhase.attack
+    this.phase = EnvelopePhase.trigger
   }
 
   noteOff() {
-    if (this.phase !== EnvelopePhase.forceStop) {
-      this.phase = EnvelopePhase.release
+    switch (this.phase) {
+      case EnvelopePhase.trigger:
+        // To prevent the sound from not being played when the note off comes in the same frame as the note on,
+        // the attack processing is performed before moving to the hold.
+        this.phase = EnvelopePhase.attackToHold
+        break
+      case EnvelopePhase.forceStop:
+        // do nothing
+        break
+      default:
+        this.phase = EnvelopePhase.release
+        break
     }
   }
 
@@ -52,13 +64,17 @@ export class AmplitudeEnvelope {
 
     // Attack
     switch (this.phase) {
+      case EnvelopePhase.trigger:
+        this.phase = EnvelopePhase.attack
+      // same as attack
+      case EnvelopePhase.attackToHold:
       case EnvelopePhase.attack: {
         const amplificationPerFrame =
           (1 / (attackTime * sampleRate)) * bufferSize
-        const value = this.lastAmplitude + amplificationPerFrame
-        if (value >= 1) {
-          this.lastAmplitude = 1
+        const value = Math.min(1, this.lastAmplitude + amplificationPerFrame)
+        if (value >= 1 || this.phase === EnvelopePhase.attackToHold) {
           this.phase = EnvelopePhase.hold
+          this.lastAmplitude = value
           this.holdPhaseTime = 0
           return 1
         }
