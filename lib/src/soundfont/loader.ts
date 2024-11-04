@@ -6,6 +6,7 @@ import {
   getPresetGenerators,
   parse,
 } from "@ryohey/sf2parser"
+import { AmplitudeEnvelopeParameter } from "../processor/AmplitudeEnvelope"
 import {
   LoadSampleEvent,
   SampleLoop,
@@ -116,8 +117,9 @@ const parseSamplesFromSoundFont = (data: Uint8Array) => {
 
         const audioData = addSampleIfNeeded(sampleID)
 
-        const amplitudeEnvelope = {
+        const amplitudeEnvelope: AmplitudeEnvelopeParameter = {
           attackTime: timeCentToSec(gen.attackVolEnv),
+          holdTime: timeCentToSec(gen.holdVolEnv),
           decayTime: timeCentToSec(gen.decayVolEnv) / 4,
           sustainLevel: 1 - gen.sustainVolEnv / 1000,
           releaseTime: timeCentToSec(gen.releaseVolEnv) / 4,

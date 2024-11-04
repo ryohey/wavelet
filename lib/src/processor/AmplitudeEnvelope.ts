@@ -1,5 +1,6 @@
 export interface AmplitudeEnvelopeParameter {
   attackTime: number
+  holdTime: number
   decayTime: number
   sustainLevel: number
   releaseTime: number
@@ -7,6 +8,7 @@ export interface AmplitudeEnvelopeParameter {
 
 enum EnvelopePhase {
   attack,
+  hold,
   decay,
   sustain,
   release,
@@ -19,6 +21,7 @@ const forceStopReleaseTime = 0.1
 export class AmplitudeEnvelope {
   private readonly parameter: AmplitudeEnvelopeParameter
   private phase = EnvelopePhase.attack
+  private holdPhaseTime = 0
   private lastAmplitude = 0
   private readonly sampleRate: number
 
@@ -43,7 +46,8 @@ export class AmplitudeEnvelope {
   }
 
   getAmplitude(bufferSize: number): number {
-    const { attackTime, decayTime, sustainLevel, releaseTime } = this.parameter
+    const { attackTime, holdTime, decayTime, sustainLevel, releaseTime } =
+      this.parameter
     const { sampleRate } = this
 
     // Attack
@@ -53,12 +57,20 @@ export class AmplitudeEnvelope {
           (1 / (attackTime * sampleRate)) * bufferSize
         const value = this.lastAmplitude + amplificationPerFrame
         if (value >= 1) {
-          this.phase = EnvelopePhase.decay
           this.lastAmplitude = 1
+          this.phase = EnvelopePhase.hold
+          this.holdPhaseTime = 0
           return 1
         }
         this.lastAmplitude = value
         return value
+      }
+      case EnvelopePhase.hold: {
+        if (this.holdPhaseTime >= holdTime) {
+          this.phase = EnvelopePhase.decay
+        }
+        this.holdPhaseTime += bufferSize / sampleRate
+        return this.lastAmplitude
       }
       case EnvelopePhase.decay: {
         const attenuationPerFrame = (1 / (decayTime * sampleRate)) * bufferSize
