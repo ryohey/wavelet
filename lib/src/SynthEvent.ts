@@ -2,16 +2,21 @@ import { AnyChannelEvent } from "midifile-ts"
 import { AmplitudeEnvelopeParameter } from "./processor/AmplitudeEnvelope"
 import { DistributiveOmit } from "./types"
 
-export interface SampleLoop {
-  start: number
-  end: number
-}
+export type SampleLoop =
+  | {
+      type: "no_loop"
+    }
+  | {
+      type: "loop_continuous" | "loop_sustain"
+      start: number
+      end: number
+    }
 
 export interface SampleParameter {
   name: string
   sampleID: number
   pitch: number
-  loop: SampleLoop | null
+  loop: SampleLoop
   sampleStart: number
   sampleEnd: number
   sampleRate: number

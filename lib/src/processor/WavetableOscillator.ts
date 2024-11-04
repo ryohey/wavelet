@@ -86,7 +86,11 @@ export class WavetableOscillator {
       const advancedIndex = this.sampleIndex + modulatedSpeed
       let loopIndex: number | null = null
 
-      if (this.sample.loop !== null && advancedIndex >= this.sample.loop.end) {
+      if (
+        (this.sample.loop.type === "loop_continuous" ||
+          (this.sample.loop.type === "loop_sustain" && !this._isNoteOff)) &&
+        advancedIndex >= this.sample.loop.end
+      ) {
         loopIndex =
           this.sample.loop.start + (advancedIndex - Math.floor(advancedIndex))
       }

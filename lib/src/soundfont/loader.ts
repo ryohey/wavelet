@@ -8,6 +8,7 @@ import {
 } from "@ryohey/sf2parser"
 import {
   LoadSampleEvent,
+  SampleLoop,
   SampleParameter,
   SampleParameterEvent,
   SampleRange,
@@ -122,19 +123,40 @@ const parseSamplesFromSoundFont = (data: Uint8Array) => {
           releaseTime: timeCentToSec(gen.releaseVolEnv) / 4,
         }
 
+        const loop: SampleLoop = (() => {
+          switch (gen.sampleModes) {
+            case 0:
+              // no_loop
+              break
+            case 1:
+              if (loopEnd > 0) {
+                return {
+                  type: "loop_continuous",
+                  start: loopStart,
+                  end: loopEnd,
+                }
+              }
+            case 3:
+              if (loopEnd > 0) {
+                return {
+                  type: "loop_sustain",
+                  start: loopStart,
+                  end: loopEnd,
+                }
+              }
+              break
+          }
+          // fallback as no_loop
+          return { type: "no_loop" }
+        })()
+
         const parameter: SampleParameter = {
           sampleID: sampleID,
           pitch: -basePitch,
           name: sampleHeader.sampleName,
           sampleStart,
           sampleEnd: sampleEnd === 0 ? audioData.length : sampleEnd,
-          loop:
-            gen.sampleModes === 1 && loopEnd > 0
-              ? {
-                  start: loopStart,
-                  end: loopEnd,
-                }
-              : null,
+          loop,
           sampleRate: sampleHeader.sampleRate,
           amplitudeEnvelope,
           scaleTuning: gen.scaleTuning / 100,
