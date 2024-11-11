@@ -120,9 +120,9 @@ const parseSamplesFromSoundFont = (data: Uint8Array) => {
         const amplitudeEnvelope: AmplitudeEnvelopeParameter = {
           attackTime: timeCentToSec(gen.attackVolEnv),
           holdTime: timeCentToSec(gen.holdVolEnv),
-          decayTime: timeCentToSec(gen.decayVolEnv) / 4,
-          sustainLevel: 1 - gen.sustainVolEnv / 1000,
-          releaseTime: timeCentToSec(gen.releaseVolEnv) / 4,
+          decayTime: timeCentToSec(gen.decayVolEnv),
+          sustainLevel: 1 / centibelToLinear(gen.sustainVolEnv),
+          releaseTime: timeCentToSec(gen.releaseVolEnv),
         }
 
         const loop: SampleLoop = (() => {
@@ -229,6 +229,10 @@ function timeCentToSec(value: number) {
   }
 
   return convertTime(value)
+}
+
+function centibelToLinear(value: number) {
+  return Math.pow(10, value / 200)
 }
 
 function removeUndefined<T>(obj: T) {

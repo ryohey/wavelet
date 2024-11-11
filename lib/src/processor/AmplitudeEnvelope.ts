@@ -7,9 +7,7 @@ export interface AmplitudeEnvelopeParameter {
 }
 
 enum EnvelopePhase {
-  trigger, // just 1 frame after note on
   attack,
-  attackToHold,
   hold,
   decay,
   sustain,
@@ -23,7 +21,11 @@ const forceStopReleaseTime = 0.1
 export class AmplitudeEnvelope {
   private readonly parameter: AmplitudeEnvelopeParameter
   private phase = EnvelopePhase.stopped
+  private isNoteOff = false
   private holdPhaseTime = 0
+  private decayPhaseTime = 0
+  private releasePhaseTime = 0
+  private decayLevel = 0 // amplitude level at the end of decay phase
   private lastAmplitude = 0
   private readonly sampleRate: number
 
@@ -33,22 +35,22 @@ export class AmplitudeEnvelope {
   }
 
   noteOn() {
-    this.phase = EnvelopePhase.trigger
+    this.phase = EnvelopePhase.attack
+    this.isNoteOff = false
+    this.holdPhaseTime = 0
+    this.decayPhaseTime = 0
+    this.releasePhaseTime = 0
+    this.decayLevel = this.parameter.sustainLevel
   }
 
   noteOff() {
-    switch (this.phase) {
-      case EnvelopePhase.trigger:
-        // To prevent the sound from not being played when the note off comes in the same frame as the note on,
-        // the attack processing is performed before moving to the hold.
-        this.phase = EnvelopePhase.attackToHold
-        break
-      case EnvelopePhase.forceStop:
-        // do nothing
-        break
-      default:
-        this.phase = EnvelopePhase.release
-        break
+    this.isNoteOff = true
+    if (
+      this.phase === EnvelopePhase.decay ||
+      this.phase === EnvelopePhase.sustain
+    ) {
+      this.phase = EnvelopePhase.release
+      this.decayLevel = this.lastAmplitude
     }
   }
 
@@ -57,67 +59,73 @@ export class AmplitudeEnvelope {
     this.phase = EnvelopePhase.forceStop
   }
 
-  getAmplitude(bufferSize: number): number {
+  calculateAmplitude(bufferSize: number): number {
     const { attackTime, holdTime, decayTime, sustainLevel, releaseTime } =
       this.parameter
     const { sampleRate } = this
 
     // Attack
     switch (this.phase) {
-      case EnvelopePhase.trigger:
-        this.phase = EnvelopePhase.attack
-      // same as attack
-      case EnvelopePhase.attackToHold:
       case EnvelopePhase.attack: {
         const amplificationPerFrame =
           (1 / (attackTime * sampleRate)) * bufferSize
-        const value = Math.min(1, this.lastAmplitude + amplificationPerFrame)
-        if (value >= 1 || this.phase === EnvelopePhase.attackToHold) {
+        const value = this.lastAmplitude + amplificationPerFrame
+        if (value >= 1 || this.isNoteOff) {
           this.phase = EnvelopePhase.hold
-          this.lastAmplitude = value
-          this.holdPhaseTime = 0
           return 1
         }
-        this.lastAmplitude = value
         return value
       }
       case EnvelopePhase.hold: {
         if (this.holdPhaseTime >= holdTime) {
-          this.phase = EnvelopePhase.decay
+          if (this.isNoteOff) {
+            this.phase = EnvelopePhase.release
+          } else {
+            this.phase = EnvelopePhase.decay
+          }
         }
         this.holdPhaseTime += bufferSize / sampleRate
         return this.lastAmplitude
       }
       case EnvelopePhase.decay: {
-        const attenuationPerFrame = (1 / (decayTime * sampleRate)) * bufferSize
-        const value = this.lastAmplitude - attenuationPerFrame
-        if (value <= sustainLevel) {
+        const attenuationDecibel = linearToDecibel(sustainLevel / 1)
+        const value = logAttenuation(
+          1.0,
+          attenuationDecibel,
+          decayTime,
+          this.decayPhaseTime
+        )
+        if (this.decayPhaseTime > decayTime) {
           if (sustainLevel <= 0) {
             this.phase = EnvelopePhase.stopped
-            this.lastAmplitude = 0
             return 0
           } else {
-            this.phase = EnvelopePhase.sustain
-            this.lastAmplitude = sustainLevel
+            if (this.isNoteOff) {
+              this.phase = EnvelopePhase.release
+            } else {
+              this.phase = EnvelopePhase.sustain
+            }
             return sustainLevel
           }
         }
-        this.lastAmplitude = value
+        this.decayPhaseTime += bufferSize / sampleRate
         return value
       }
       case EnvelopePhase.sustain: {
         return sustainLevel
       }
       case EnvelopePhase.release: {
-        const attenuationPerFrame =
-          (1 / (releaseTime * sampleRate)) * bufferSize
-        const value = this.lastAmplitude - attenuationPerFrame
-        if (value <= 0) {
+        const value = logAttenuation(
+          this.decayLevel,
+          -100, // -100dB means almost silence
+          releaseTime,
+          this.releasePhaseTime
+        )
+        if (this.releasePhaseTime > releaseTime || value <= 0) {
           this.phase = EnvelopePhase.stopped
-          this.lastAmplitude = 0
           return 0
         }
-        this.lastAmplitude = value
+        this.releasePhaseTime += bufferSize / sampleRate
         return value
       }
       case EnvelopePhase.forceStop: {
@@ -126,10 +134,8 @@ export class AmplitudeEnvelope {
         const value = this.lastAmplitude - attenuationPerFrame
         if (value <= 0) {
           this.phase = EnvelopePhase.stopped
-          this.lastAmplitude = 0
           return 0
         }
-        this.lastAmplitude = value
         return value
       }
       case EnvelopePhase.stopped: {
@@ -138,7 +144,31 @@ export class AmplitudeEnvelope {
     }
   }
 
+  getAmplitude(bufferSize: number): number {
+    const value = this.calculateAmplitude(bufferSize)
+    this.lastAmplitude = value
+    return value
+  }
+
   get isPlaying() {
     return this.phase !== EnvelopePhase.stopped
   }
+}
+
+// An exponential decay function. It attenuates the value of decibel over the duration time.
+function logAttenuation(
+  fromLevel: number,
+  attenuationDecibel: number,
+  duration: number,
+  time: number
+): number {
+  return fromLevel * decibelToLinear((attenuationDecibel / duration) * time)
+}
+
+function linearToDecibel(value: number): number {
+  return 20 * Math.log10(value)
+}
+
+function decibelToLinear(value: number): number {
+  return Math.pow(10, value / 20)
 }
