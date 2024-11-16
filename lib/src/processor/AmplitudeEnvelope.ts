@@ -20,11 +20,9 @@ const forceStopReleaseTime = 0.1
 
 export class AmplitudeEnvelope {
   private readonly parameter: AmplitudeEnvelopeParameter
-  private phase = EnvelopePhase.stopped
+  private _phase = EnvelopePhase.stopped
   private isNoteOff = false
-  private holdPhaseTime = 0
-  private decayPhaseTime = 0
-  private releasePhaseTime = 0
+  private phaseTime = 0
   private decayLevel = 0 // amplitude level at the end of decay phase
   private lastAmplitude = 0
   private readonly sampleRate: number
@@ -34,12 +32,22 @@ export class AmplitudeEnvelope {
     this.sampleRate = sampleRate
   }
 
+  private get phase() {
+    return this._phase
+  }
+
+  private set phase(phase: EnvelopePhase) {
+    if (this._phase === phase) {
+      return
+    }
+    this._phase = phase
+    this.phaseTime = 0
+  }
+
   noteOn() {
     this.phase = EnvelopePhase.attack
     this.isNoteOff = false
-    this.holdPhaseTime = 0
-    this.decayPhaseTime = 0
-    this.releasePhaseTime = 0
+    this.phaseTime = 0
     this.decayLevel = this.parameter.sustainLevel
   }
 
@@ -79,10 +87,9 @@ export class AmplitudeEnvelope {
         return value
       }
       case EnvelopePhase.hold: {
-        if (this.holdPhaseTime >= holdTime) {
+        if (this.phaseTime >= holdTime) {
           this.phase = EnvelopePhase.decay
         }
-        this.holdPhaseTime += bufferSize / sampleRate
         return this.lastAmplitude
       }
       case EnvelopePhase.decay: {
@@ -91,9 +98,9 @@ export class AmplitudeEnvelope {
           1.0,
           attenuationDecibel,
           decayTime,
-          this.decayPhaseTime
+          this.phaseTime
         )
-        if (this.decayPhaseTime > decayTime) {
+        if (this.phaseTime > decayTime) {
           if (sustainLevel <= 0) {
             this.phase = EnvelopePhase.stopped
             return 0
@@ -102,7 +109,6 @@ export class AmplitudeEnvelope {
             return sustainLevel
           }
         }
-        this.decayPhaseTime += bufferSize / sampleRate
         return value
       }
       case EnvelopePhase.sustain: {
@@ -113,13 +119,12 @@ export class AmplitudeEnvelope {
           this.decayLevel,
           -100, // -100dB means almost silence
           releaseTime,
-          this.releasePhaseTime
+          this.phaseTime
         )
-        if (this.releasePhaseTime > releaseTime || value <= 0) {
+        if (this.phaseTime > releaseTime || value <= 0) {
           this.phase = EnvelopePhase.stopped
           return 0
         }
-        this.releasePhaseTime += bufferSize / sampleRate
         return value
       }
       case EnvelopePhase.forceStop: {
@@ -141,6 +146,7 @@ export class AmplitudeEnvelope {
   getAmplitude(bufferSize: number): number {
     const value = this.calculateAmplitude(bufferSize)
     this.lastAmplitude = value
+    this.phaseTime += bufferSize / sampleRate
     return value
   }
 
