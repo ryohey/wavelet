@@ -45,13 +45,6 @@ export class AmplitudeEnvelope {
 
   noteOff() {
     this.isNoteOff = true
-    if (
-      this.phase === EnvelopePhase.decay ||
-      this.phase === EnvelopePhase.sustain
-    ) {
-      this.phase = EnvelopePhase.release
-      this.decayLevel = this.lastAmplitude
-    }
   }
 
   // Rapidly decrease the volume. This method ignores release time parameter
@@ -64,13 +57,22 @@ export class AmplitudeEnvelope {
       this.parameter
     const { sampleRate } = this
 
+    if (
+      this.isNoteOff &&
+      (this.phase === EnvelopePhase.decay ||
+        this.phase === EnvelopePhase.sustain)
+    ) {
+      this.phase = EnvelopePhase.release
+      this.decayLevel = this.lastAmplitude
+    }
+
     // Attack
     switch (this.phase) {
       case EnvelopePhase.attack: {
         const amplificationPerFrame =
           (1 / (attackTime * sampleRate)) * bufferSize
         const value = this.lastAmplitude + amplificationPerFrame
-        if (value >= 1 || this.isNoteOff) {
+        if (value >= 1) {
           this.phase = EnvelopePhase.hold
           return 1
         }
@@ -78,11 +80,7 @@ export class AmplitudeEnvelope {
       }
       case EnvelopePhase.hold: {
         if (this.holdPhaseTime >= holdTime) {
-          if (this.isNoteOff) {
-            this.phase = EnvelopePhase.release
-          } else {
-            this.phase = EnvelopePhase.decay
-          }
+          this.phase = EnvelopePhase.decay
         }
         this.holdPhaseTime += bufferSize / sampleRate
         return this.lastAmplitude
@@ -100,11 +98,7 @@ export class AmplitudeEnvelope {
             this.phase = EnvelopePhase.stopped
             return 0
           } else {
-            if (this.isNoteOff) {
-              this.phase = EnvelopePhase.release
-            } else {
-              this.phase = EnvelopePhase.sustain
-            }
+            this.phase = EnvelopePhase.sustain
             return sustainLevel
           }
         }
