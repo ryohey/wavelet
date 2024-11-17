@@ -95,7 +95,7 @@ export class SynthProcessorCore {
     for (const sample of samples) {
       const oscillator = new WavetableOscillator(sample, this.sampleRate)
 
-      const volume = velocity / 0x80
+      const volume = velocity / 127
       oscillator.noteOn(pitch, volume)
 
       if (state.oscillators[pitch] === undefined) {
@@ -151,12 +151,12 @@ export class SynthProcessorCore {
 
   setMainVolume(channel: number, value: number) {
     const state = this.getChannelState(channel)
-    state.volume = value / 0x80
+    state.volume = value / 127
   }
 
   expression(channel: number, value: number) {
     const state = this.getChannelState(channel)
-    state.expression = value / 0x80
+    state.expression = value / 127
   }
 
   allSoundsOff(channel: number) {
@@ -210,7 +210,7 @@ export class SynthProcessorCore {
 
   modulation(channel: number, value: number) {
     const state = this.getChannelState(channel)
-    state.modulation = value / 0x80
+    state.modulation = value / 127
   }
 
   resetChannel(channel: number) {
@@ -247,13 +247,6 @@ export class SynthProcessorCore {
           return true
         })
       }
-    }
-
-    // master volume
-    const masterVolume = 0.3
-    for (let i = 0; i < outputs[0].length; ++i) {
-      outputs[0][i] *= masterVolume
-      outputs[1][i] *= masterVolume
     }
   }
 }

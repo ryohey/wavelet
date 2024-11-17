@@ -1,5 +1,6 @@
 export interface AmplitudeEnvelopeParameter {
   attackTime: number
+  holdTime: number
   decayTime: number
   sustainLevel: number
   releaseTime: number
@@ -7,6 +8,7 @@ export interface AmplitudeEnvelopeParameter {
 
 enum EnvelopePhase {
   attack,
+  hold,
   decay,
   sustain,
   release,
@@ -18,7 +20,10 @@ const forceStopReleaseTime = 0.1
 
 export class AmplitudeEnvelope {
   private readonly parameter: AmplitudeEnvelopeParameter
-  private phase = EnvelopePhase.attack
+  private _phase = EnvelopePhase.stopped
+  private isNoteOff = false
+  private phaseTime = 0
+  private decayLevel = 0 // amplitude level at the end of decay phase
   private lastAmplitude = 0
   private readonly sampleRate: number
 
@@ -27,14 +32,27 @@ export class AmplitudeEnvelope {
     this.sampleRate = sampleRate
   }
 
+  private get phase() {
+    return this._phase
+  }
+
+  private set phase(phase: EnvelopePhase) {
+    if (this._phase === phase) {
+      return
+    }
+    this._phase = phase
+    this.phaseTime = 0
+  }
+
   noteOn() {
     this.phase = EnvelopePhase.attack
+    this.isNoteOff = false
+    this.phaseTime = 0
+    this.decayLevel = this.parameter.sustainLevel
   }
 
   noteOff() {
-    if (this.phase !== EnvelopePhase.forceStop) {
-      this.phase = EnvelopePhase.release
-    }
+    this.isNoteOff = true
   }
 
   // Rapidly decrease the volume. This method ignores release time parameter
@@ -42,9 +60,19 @@ export class AmplitudeEnvelope {
     this.phase = EnvelopePhase.forceStop
   }
 
-  getAmplitude(bufferSize: number): number {
-    const { attackTime, decayTime, sustainLevel, releaseTime } = this.parameter
+  calculateAmplitude(bufferSize: number): number {
+    const { attackTime, holdTime, decayTime, sustainLevel, releaseTime } =
+      this.parameter
     const { sampleRate } = this
+
+    if (
+      this.isNoteOff &&
+      (this.phase === EnvelopePhase.decay ||
+        this.phase === EnvelopePhase.sustain)
+    ) {
+      this.phase = EnvelopePhase.release
+      this.decayLevel = this.lastAmplitude
+    }
 
     // Attack
     switch (this.phase) {
@@ -53,43 +81,50 @@ export class AmplitudeEnvelope {
           (1 / (attackTime * sampleRate)) * bufferSize
         const value = this.lastAmplitude + amplificationPerFrame
         if (value >= 1) {
-          this.phase = EnvelopePhase.decay
-          this.lastAmplitude = 1
+          this.phase = EnvelopePhase.hold
           return 1
         }
-        this.lastAmplitude = value
         return value
       }
+      case EnvelopePhase.hold: {
+        if (this.phaseTime >= holdTime) {
+          this.phase = EnvelopePhase.decay
+        }
+        return this.lastAmplitude
+      }
       case EnvelopePhase.decay: {
-        const attenuationPerFrame = (1 / (decayTime * sampleRate)) * bufferSize
-        const value = this.lastAmplitude - attenuationPerFrame
-        if (value <= sustainLevel) {
+        const attenuationDecibel = linearToDecibel(sustainLevel / 1)
+        const value = logAttenuation(
+          1.0,
+          attenuationDecibel,
+          decayTime,
+          this.phaseTime
+        )
+        if (this.phaseTime > decayTime) {
           if (sustainLevel <= 0) {
             this.phase = EnvelopePhase.stopped
-            this.lastAmplitude = 0
             return 0
           } else {
             this.phase = EnvelopePhase.sustain
-            this.lastAmplitude = sustainLevel
             return sustainLevel
           }
         }
-        this.lastAmplitude = value
         return value
       }
       case EnvelopePhase.sustain: {
         return sustainLevel
       }
       case EnvelopePhase.release: {
-        const attenuationPerFrame =
-          (1 / (releaseTime * sampleRate)) * bufferSize
-        const value = this.lastAmplitude - attenuationPerFrame
-        if (value <= 0) {
+        const value = logAttenuation(
+          this.decayLevel,
+          -100, // -100dB means almost silence
+          releaseTime,
+          this.phaseTime
+        )
+        if (this.phaseTime > releaseTime || value <= 0) {
           this.phase = EnvelopePhase.stopped
-          this.lastAmplitude = 0
           return 0
         }
-        this.lastAmplitude = value
         return value
       }
       case EnvelopePhase.forceStop: {
@@ -98,10 +133,8 @@ export class AmplitudeEnvelope {
         const value = this.lastAmplitude - attenuationPerFrame
         if (value <= 0) {
           this.phase = EnvelopePhase.stopped
-          this.lastAmplitude = 0
           return 0
         }
-        this.lastAmplitude = value
         return value
       }
       case EnvelopePhase.stopped: {
@@ -110,7 +143,32 @@ export class AmplitudeEnvelope {
     }
   }
 
+  getAmplitude(bufferSize: number): number {
+    const value = this.calculateAmplitude(bufferSize)
+    this.lastAmplitude = value
+    this.phaseTime += bufferSize / sampleRate
+    return value
+  }
+
   get isPlaying() {
     return this.phase !== EnvelopePhase.stopped
   }
+}
+
+// An exponential decay function. It attenuates the value of decibel over the duration time.
+function logAttenuation(
+  fromLevel: number,
+  attenuationDecibel: number,
+  duration: number,
+  time: number
+): number {
+  return fromLevel * decibelToLinear((attenuationDecibel / duration) * time)
+}
+
+function linearToDecibel(value: number): number {
+  return 20 * Math.log10(value)
+}
+
+function decibelToLinear(value: number): number {
+  return Math.pow(10, value / 20)
 }

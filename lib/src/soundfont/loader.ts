@@ -1,17 +1,18 @@
 import {
-  createGeneraterObject,
   defaultInstrumentZone,
   GeneratorParams,
-  getInstrumentGenerators,
   getPresetGenerators,
   parse,
 } from "@ryohey/sf2parser"
+import { AmplitudeEnvelopeParameter } from "../processor/AmplitudeEnvelope"
 import {
   LoadSampleEvent,
+  SampleLoop,
   SampleParameter,
   SampleParameterEvent,
   SampleRange,
 } from "../SynthEvent"
+import { getInstrumentZones } from "./getInstrumentZones"
 import { getPresetZones } from "./getPresetZones"
 
 export interface BufferCreator {
@@ -49,22 +50,16 @@ const parseSamplesFromSoundFont = (data: Uint8Array) => {
 
     const presetZones = getPresetZones(presetGenerators)
 
-    for (const presetZone of presetZones.instruments) {
-      const instrumentID = presetZone.instrument
-      const instrumentZones = getInstrumentGenerators(parsed, instrumentID).map(
-        createGeneraterObject
-      )
-
-      // 最初のゾーンがsampleID を持たなければ global instrument zone
-      let globalInstrumentZone: any | undefined
-      const firstInstrumentZone = instrumentZones[0]
-      if (firstInstrumentZone.sampleID === undefined) {
-        globalInstrumentZone = instrumentZones[0]
+    for (const presetZone of presetZones.zones) {
+      const presetGen = {
+        ...removeUndefined(presetZones.globalZone ?? {}),
+        ...removeUndefined(presetZone),
       }
 
-      for (const zone of instrumentZones.filter(
-        (zone) => zone.sampleID !== undefined
-      )) {
+      const instrumentID = presetZone.instrument
+      const instrumentZones = getInstrumentZones(parsed, instrumentID)
+
+      for (const zone of instrumentZones.zones) {
         const sampleID = zone.sampleID!
         const sampleHeader = parsed.sampleHeaders[sampleID]
 
@@ -73,21 +68,21 @@ const parseSamplesFromSoundFont = (data: Uint8Array) => {
 
         const gen = {
           ...generatorDefault,
-          ...removeUndefined(globalInstrumentZone ?? {}),
+          ...removeUndefined(instrumentZones.globalZone ?? {}),
           ...removeUndefined(zone),
         }
 
         // inherit preset's velRange
-        gen.velRange = gen.velRange ?? presetZone.velRange ?? defaultVelRange
+        gen.velRange = gen.velRange ?? presetGen.velRange ?? defaultVelRange
 
         // add presetGenerator value
         for (const key of Object.keys(gen) as (keyof GeneratorParams)[]) {
           if (
-            key in presetZone &&
+            key in presetGen &&
             typeof gen[key] === "number" &&
-            typeof presetZone[key] === "number"
+            typeof presetGen[key] === "number"
           ) {
-            gen[key] += presetZone[key]
+            gen[key] += presetGen[key]
           }
         }
 
@@ -115,12 +110,40 @@ const parseSamplesFromSoundFont = (data: Uint8Array) => {
 
         const audioData = addSampleIfNeeded(sampleID)
 
-        const amplitudeEnvelope = {
+        const amplitudeEnvelope: AmplitudeEnvelopeParameter = {
           attackTime: timeCentToSec(gen.attackVolEnv),
-          decayTime: timeCentToSec(gen.decayVolEnv) / 4,
-          sustainLevel: 1 - gen.sustainVolEnv / 1000,
-          releaseTime: timeCentToSec(gen.releaseVolEnv) / 4,
+          holdTime: timeCentToSec(gen.holdVolEnv),
+          decayTime: timeCentToSec(gen.decayVolEnv),
+          sustainLevel: 1 / centibelToLinear(gen.sustainVolEnv),
+          releaseTime: timeCentToSec(gen.releaseVolEnv),
         }
+
+        const loop: SampleLoop = (() => {
+          switch (gen.sampleModes) {
+            case 0:
+              // no_loop
+              break
+            case 1:
+              if (loopEnd > 0) {
+                return {
+                  type: "loop_continuous",
+                  start: loopStart,
+                  end: loopEnd,
+                }
+              }
+            case 3:
+              if (loopEnd > 0) {
+                return {
+                  type: "loop_sustain",
+                  start: loopStart,
+                  end: loopEnd,
+                }
+              }
+              break
+          }
+          // fallback as no_loop
+          return { type: "no_loop" }
+        })()
 
         const parameter: SampleParameter = {
           sampleID: sampleID,
@@ -128,19 +151,13 @@ const parseSamplesFromSoundFont = (data: Uint8Array) => {
           name: sampleHeader.sampleName,
           sampleStart,
           sampleEnd: sampleEnd === 0 ? audioData.length : sampleEnd,
-          loop:
-            gen.sampleModes === 1 && loopEnd > 0
-              ? {
-                  start: loopStart,
-                  end: loopEnd,
-                }
-              : null,
+          loop,
           sampleRate: sampleHeader.sampleRate,
           amplitudeEnvelope,
           scaleTuning: gen.scaleTuning / 100,
           pan: (gen.pan ?? 0) / 500,
           exclusiveClass: gen.exclusiveClass,
-          volume: 1 - gen.initialAttenuation / 1000,
+          volume: centibelToLinear(-gen.initialAttenuation),
         }
 
         const range: SampleRange = {
@@ -205,6 +222,10 @@ function timeCentToSec(value: number) {
   }
 
   return convertTime(value)
+}
+
+function centibelToLinear(value: number) {
+  return Math.pow(10, value / 200)
 }
 
 function removeUndefined<T>(obj: T) {
