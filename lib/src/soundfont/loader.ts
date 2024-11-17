@@ -1,8 +1,6 @@
 import {
-  createGeneraterObject,
   defaultInstrumentZone,
   GeneratorParams,
-  getInstrumentGenerators,
   getPresetGenerators,
   parse,
 } from "@ryohey/sf2parser"
@@ -14,6 +12,7 @@ import {
   SampleParameterEvent,
   SampleRange,
 } from "../SynthEvent"
+import { getInstrumentZones } from "./getInstrumentZones"
 import { getPresetZones } from "./getPresetZones"
 
 export interface BufferCreator {
@@ -51,22 +50,16 @@ const parseSamplesFromSoundFont = (data: Uint8Array) => {
 
     const presetZones = getPresetZones(presetGenerators)
 
-    for (const presetZone of presetZones.instruments) {
-      const instrumentID = presetZone.instrument
-      const instrumentZones = getInstrumentGenerators(parsed, instrumentID).map(
-        createGeneraterObject
-      )
-
-      // 最初のゾーンがsampleID を持たなければ global instrument zone
-      let globalInstrumentZone: any | undefined
-      const firstInstrumentZone = instrumentZones[0]
-      if (firstInstrumentZone.sampleID === undefined) {
-        globalInstrumentZone = instrumentZones[0]
+    for (const presetZone of presetZones.zones) {
+      const presetGen = {
+        ...removeUndefined(presetZones.globalZone ?? {}),
+        ...removeUndefined(presetZone),
       }
 
-      for (const zone of instrumentZones.filter(
-        (zone) => zone.sampleID !== undefined
-      )) {
+      const instrumentID = presetZone.instrument
+      const instrumentZones = getInstrumentZones(parsed, instrumentID)
+
+      for (const zone of instrumentZones.zones) {
         const sampleID = zone.sampleID!
         const sampleHeader = parsed.sampleHeaders[sampleID]
 
@@ -75,21 +68,21 @@ const parseSamplesFromSoundFont = (data: Uint8Array) => {
 
         const gen = {
           ...generatorDefault,
-          ...removeUndefined(globalInstrumentZone ?? {}),
+          ...removeUndefined(instrumentZones.globalZone ?? {}),
           ...removeUndefined(zone),
         }
 
         // inherit preset's velRange
-        gen.velRange = gen.velRange ?? presetZone.velRange ?? defaultVelRange
+        gen.velRange = gen.velRange ?? presetGen.velRange ?? defaultVelRange
 
         // add presetGenerator value
         for (const key of Object.keys(gen) as (keyof GeneratorParams)[]) {
           if (
-            key in presetZone &&
+            key in presetGen &&
             typeof gen[key] === "number" &&
-            typeof presetZone[key] === "number"
+            typeof presetGen[key] === "number"
           ) {
-            gen[key] += presetZone[key]
+            gen[key] += presetGen[key]
           }
         }
 
