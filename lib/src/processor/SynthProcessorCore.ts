@@ -248,12 +248,5 @@ export class SynthProcessorCore {
         })
       }
     }
-
-    // master volume
-    const masterVolume = 0.3
-    for (let i = 0; i < outputs[0].length; ++i) {
-      outputs[0][i] *= masterVolume
-      outputs[1][i] *= masterVolume
-    }
   }
 }
