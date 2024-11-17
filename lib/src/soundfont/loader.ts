@@ -157,7 +157,7 @@ const parseSamplesFromSoundFont = (data: Uint8Array) => {
           scaleTuning: gen.scaleTuning / 100,
           pan: (gen.pan ?? 0) / 500,
           exclusiveClass: gen.exclusiveClass,
-          volume: 1 - gen.initialAttenuation / 1000,
+          volume: centibelToLinear(-gen.initialAttenuation),
         }
 
         const range: SampleRange = {
