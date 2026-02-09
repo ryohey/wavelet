@@ -144,6 +144,7 @@ export class AmplitudeEnvelope {
   }
 
   getAmplitude(bufferSize: number): number {
+    const { sampleRate } = this
     const value = this.calculateAmplitude(bufferSize)
     this.lastAmplitude = value
     this.phaseTime += bufferSize / sampleRate

@@ -190,7 +190,7 @@ export const getSampleEventsFromSoundFont = (
     ([key, value]) => ({
       type: "loadSample",
       sampleID: Number(key),
-      data: value.buffer,
+      data: value.buffer as ArrayBuffer,
     })
   )
 
